@@ -1,0 +1,266 @@
+/* Blueprint Layout Styles */
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.welcomeText {
+    margin: 0;
+    font-size: 1.75rem;
+    color: #111827;
+}
+
+.subtitle {
+    margin: 0.25rem 0 0 0;
+    color: #6b7280;
+}
+
+.primaryBtn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background-color: #2563eb;
+    color: white;
+    border: none;
+    padding: 0.75rem 1.25rem;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    font-size: 0.95rem;
+}
+
+.primaryBtn:hover {
+    background-color: #1d4ed8;
+}
+
+/* Metrics Grid */
+.metricsGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.metricCard {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    border: 1px solid #e5e7eb;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.iconWrapper {
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.blueBg {
+    background: #dbeafe;
+}
+
+.greenBg {
+    background: #dcfce7;
+}
+
+.yellowBg {
+    background: #fef9c3;
+}
+
+.purpleBg {
+    background: #f3e8ff;
+}
+
+.metricLabel {
+    margin: 0;
+    font-size: 0.875rem;
+    color: #6b7280;
+}
+
+.metricValue {
+    margin: 0.25rem 0 0 0;
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #111827;
+}
+
+/* Main Layout */
+.mainGrid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 1.5rem;
+}
+
+@media (max-width: 1024px) {
+    .mainGrid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.leftColumn,
+.rightColumn {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.chartCard {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.cardTitle {
+    margin: 0 0 1rem 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.chartWrapper {
+    height: 300px;
+}
+
+.pieChartWrapper {
+    height: 300px;
+    display: flex;
+    justify-content: center;
+}
+
+/* Panels (Broadcast & Schedule) */
+.panelCard {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.listContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.viewMoreBtn {
+    width: 100%;
+    padding: 0.75rem;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    color: #4b5563;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.viewMoreBtn:hover {
+    background: #f3f4f6;
+    color: #111827;
+}
+
+/* Broadcast Items */
+.listItem {
+    display: flex;
+    gap: 0.75rem;
+    background: #f8fafc;
+    padding: 0.75rem;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+
+.listIcon {
+    width: 32px;
+    height: 32px;
+    background: #2563eb;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.listContent {
+    display: flex;
+    flex-direction: column;
+}
+
+.listText {
+    margin: 0;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #1e293b;
+}
+
+.listMeta {
+    font-size: 0.75rem;
+    color: #64748b;
+    margin-top: 0.2rem;
+}
+
+/* Schedule Items */
+.scheduleItem {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.scheduleItem:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.timeBox {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #334155;
+    min-width: 65px;
+}
+
+.scheduleContent {
+    flex: 1;
+}
+
+.scheduleTitle {
+    margin: 0;
+    font-size: 0.95rem;
+    color: #0f172a;
+}
+
+.badge {
+    font-size: 0.7rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: 99px;
+    font-weight: 600;
+    display: inline-block;
+    margin-top: 0.25rem;
+}
+
+.urgent {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.routine {
+    background: #f1f5f9;
+    color: #475569;
+}

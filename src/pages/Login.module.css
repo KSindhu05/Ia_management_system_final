@@ -1,0 +1,330 @@
+.container {
+  display: flex;
+  min-height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background-color: #f8fafc;
+  /* Light background for the form side */
+}
+
+/* Left Panel - Slideshow */
+.leftPanel {
+  flex: 1.2;
+  position: relative;
+  overflow: hidden;
+  background-color: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Right Panel - Login Form */
+.rightPanel {
+  flex: 0.8;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem;
+  /* Background gradient for glassmorphism context */
+  background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
+  position: relative;
+  z-index: 2;
+}
+
+/* Slideshow Container */
+.slideshow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  transition: transform 1s ease-in-out;
+  /* Blur Effect */
+  filter: blur(4px) brightness(0.6);
+  transform: scale(1.1);
+}
+
+.slide {
+  min-width: 100%;
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+}
+
+/* Overlay on images only */
+.leftPanel::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+}
+
+/* Text Overlay on Left Panel */
+/* Text Overlay on Left Panel */
+.leftOverlayContent {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  /* Glassmorphism Card Effect for Left Content */
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+
+  padding: 3rem;
+  border-radius: 24px;
+  max-width: 80%;
+  animation: fadeIn 1s ease-out;
+}
+
+.logoWrapper {
+  margin-bottom: 1.5rem;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 1.5rem;
+  border-radius: 20px;
+  /* Rectangular with rounded corners */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  width: auto;
+  max-width: 300px;
+  height: auto;
+}
+
+.leftLogo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.leftOverlayContent h1 {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: white;
+  margin-bottom: 1rem;
+  text-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+  line-height: 1.2;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.leftOverlayContent p {
+  font-size: 1.1rem;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.5;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.loginCard {
+  width: 100%;
+  max-width: 420px;
+
+  /* Glassmorphism Effect */
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
+
+  padding: 2.5rem;
+  border-radius: 24px;
+  text-align: center;
+  animation: slideLeft 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideLeft {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.header {
+  margin-bottom: 2.5rem;
+}
+
+.logoContainer {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+}
+
+.collegeLogo {
+  width: 280px;
+  /* Significantly increased size */
+  max-width: 100%;
+  height: auto;
+  object-fit: contain;
+  /* Make logo pop a bit */
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1));
+  margin-bottom: 1rem;
+}
+
+.collegeName {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #881337;
+  margin: 0;
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.subtitle {
+  color: #64748b;
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.inputGroup {
+  text-align: left;
+}
+
+.inputGroup label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #334155;
+  margin-bottom: 0.5rem;
+}
+
+.inputWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.icon {
+  position: absolute;
+  left: 14px;
+  color: #94a3b8;
+}
+
+.inputWrapper input {
+  width: 100%;
+  padding: 0.875rem 1rem 0.875rem 2.75rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 1rem;
+  transition: all 0.2s;
+  outline: none;
+  background-color: #f8fafc;
+}
+
+.inputWrapper input:focus {
+  border-color: #881337;
+  background-color: white;
+  box-shadow: 0 0 0 3px rgba(136, 19, 55, 0.1);
+}
+
+.error {
+  background-color: #fee2e2;
+  color: #ef4444;
+  padding: 0.75rem;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.loginButton {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 1rem;
+  background-color: #881337;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 6px -1px rgba(136, 19, 55, 0.3);
+}
+
+.loginButton:hover {
+  background-color: #9f1239;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(136, 19, 55, 0.4);
+}
+
+.footer {
+  margin-top: 3rem;
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+
+.securityNote {
+  margin-top: 1rem;
+  font-size: 0.8rem;
+  color: #059669;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  background: #ecfdf5;
+  border-radius: 20px;
+  width: fit-content;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 900px) {
+  .container {
+    flex-direction: column;
+  }
+
+  .leftPanel {
+    display: none;
+    /* Hide image on mobile or make it a top banner */
+  }
+
+  .rightPanel {
+    flex: 1;
+    padding: 1.5rem;
+  }
+}

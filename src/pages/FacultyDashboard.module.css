@@ -1,0 +1,772 @@
+.header {
+    margin-bottom: 2rem;
+}
+
+.welcomeText {
+    margin: 0;
+    font-size: 1.75rem;
+    color: #111827;
+}
+
+.subtitle {
+    margin: 0.25rem 0 0 0;
+    color: #6b7280;
+}
+
+.sectionTitle {
+    font-size: 1.25rem;
+    color: #111827;
+    margin-bottom: 1.5rem;
+}
+
+/* Blueprint Layout Styles */
+
+.analyticsGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.analyticsCard {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.analyticsTitle {
+    margin: 0 0 1rem 0;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.analyticsContent {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+}
+
+.statItem {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.statValue {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #111827;
+}
+
+.statLabel {
+    font-size: 0.85rem;
+    color: #6b7280;
+}
+
+/* Main Content Grid */
+.mainContentGrid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 1.5rem;
+}
+
+@media (max-width: 1024px) {
+    .mainContentGrid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.leftColumn,
+.rightColumn {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+/* Subject Cards Enhanced */
+.subjectCard {
+    background: white;
+    padding: 1.25rem;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.subjectCard:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    border-color: #2563eb;
+}
+
+.cardHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.subjectName {
+    margin: 0;
+    font-size: 1.1rem;
+    color: #1f2937;
+    font-weight: 600;
+}
+
+.termBadge {
+    background: #eff6ff;
+    color: #2563eb;
+    padding: 0.25rem 0.6rem;
+    border-radius: 99px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.subjectFooter {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: auto;
+}
+
+.progressBadge {
+    font-size: 0.75rem;
+    color: #059669;
+    background: #d1fae5;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-weight: 500;
+}
+
+/* Quick Actions Grid */
+.quickActionsGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 1rem;
+}
+
+.actionBtn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    background: white;
+    border: 1px solid #e5e7eb;
+    padding: 1rem;
+    border-radius: 8px;
+    color: #374151;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.actionBtn:hover {
+    background: #f9fafb;
+    border-color: #d1d5db;
+    color: #111827;
+}
+
+/* Lab Scheduler */
+.labCard {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+}
+
+.scheduleList {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.scheduleItem {
+    display: flex;
+    gap: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.scheduleItem:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.scheduleTime {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: #f3f4f6;
+    padding: 0.5rem;
+    border-radius: 8px;
+    min-width: 80px;
+}
+
+.day {
+    font-weight: 700;
+    color: #374151;
+    font-size: 0.9rem;
+}
+
+.time {
+    font-size: 0.75rem;
+    color: #6b7280;
+}
+
+.scheduleInfo {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.labName {
+    font-weight: 600;
+    color: #111827;
+    font-size: 0.95rem;
+}
+
+.batch {
+    font-size: 0.85rem;
+    color: #6b7280;
+}
+
+/* Marks Section Header Enhancements */
+.headerButtons {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.secondaryBtn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: white;
+    border: 1px solid #d1d5db;
+    color: #374151;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.secondaryBtn:hover {
+    background: #f9fafb;
+}
+
+/* Existing Table Styles Reuse */
+.tableContainer {
+    overflow-x: auto;
+    margin-top: 1rem;
+}
+
+.cardsGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+}
+
+/* The original .subjectCard and its hover state are replaced by the new definition above */
+/*
+.subjectCard {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e5e7eb;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.subjectCard:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    border-color: #2563eb;
+}
+*/
+
+/* The original .cardHeader and .subjectName are replaced by the new definition above */
+/*
+.cardHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    margin-bottom: 1rem;
+}
+
+.subjectName {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #1f2937;
+}
+*/
+
+/* The original .termBadge is replaced by the new definition above */
+/*
+.termBadge {
+    background-color: #eff6ff;
+    color: #2563eb;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+*/
+
+.cardStats {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #6b7280;
+    font-size: 0.9rem;
+    margin-bottom: 1.5rem;
+}
+
+.enterBtn {
+    width: 100%;
+    padding: 0.75rem;
+    background-color: #f3f4f6;
+    border: 1px solid #e5e7eb;
+    color: #374151;
+    font-weight: 500;
+    border-radius: 8px;
+    transition: all 0.2s;
+}
+
+.enterBtn:hover {
+    background-color: #e5e7eb;
+}
+
+/* Marks Section */
+.marksHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+}
+
+.backBtn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #6b7280;
+    font-size: 0.9rem;
+    font-weight: 500;
+    padding: 0;
+}
+
+.backBtn:hover {
+    text-decoration: underline;
+    color: #111827;
+}
+
+.saveBtn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background-color: #2563eb;
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.saveBtn:hover {
+    background-color: #1d4ed8;
+}
+
+.saveBtn:disabled {
+    background-color: #93c5fd;
+    cursor: not-allowed;
+}
+
+/* The original .tableContainer is replaced by the new definition above */
+/*
+.tableContainer {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    overflow-x: auto;
+    border: 1px solid #e5e7eb;
+}
+*/
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.table th {
+    text-align: left;
+    padding: 1rem;
+    background-color: #f9fafb;
+    color: #4b5563;
+    font-weight: 600;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.table td {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #f3f4f6;
+    color: #1f2937;
+    vertical-align: middle;
+}
+
+.markInput {
+    width: 60px;
+    padding: 0.5rem;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    text-align: center;
+}
+
+.markInput:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+}
+
+.avgCell {
+    font-weight: 700;
+    color: #111827;
+}
+
+.lowPerformance {
+    background-color: #fef2f2;
+}
+
+.badge {
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.excellent {
+    background-color: #dcfce7;
+    color: #166534;
+}
+
+.good {
+    background-color: #dbeafe;
+    color: #1e40af;
+}
+
+.poor {
+    background-color: #fee2e2;
+    color: #991b1b;
+}
+
+
+/* My Students Section Styles */
+.sectionContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.sectionHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.headerActions {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.searchWrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.searchIcon {
+    position: absolute;
+    left: 0.75rem;
+    color: #9ca3af;
+}
+
+.searchInput {
+    padding: 0.6rem 1rem 0.6rem 2.5rem;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    width: 250px;
+    transition: all 0.2s;
+}
+
+.searchInput:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+}
+
+.filterBtn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: white;
+    border: 1px solid #d1d5db;
+    padding: 0.6rem 1rem;
+    border-radius: 8px;
+    color: #374151;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.actionIcons {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.iconBtn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #6b7280;
+    padding: 0.25rem;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.iconBtn:hover {
+    color: #111827;
+    background: #f3f4f6;
+}
+
+.emptyState {
+    text-align: center;
+    padding: 2rem;
+}
+
+/* ===== RESPONSIVE STYLES ===== */
+
+
+/* Tablet Breakpoint */
+@media (max-width: 768px) {
+    .header {
+        margin-bottom: 1.5rem;
+    }
+
+    .welcomeText {
+        font-size: 1.5rem;
+    }
+
+    .analyticsGrid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    .analyticsContent {
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .statItem {
+        flex: 1 1 30%;
+        min-width: 80px;
+    }
+
+    .cardsGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .quickActionsGrid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .marksHeader {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+
+    .headerButtons {
+        width: 100%;
+        flex-wrap: wrap;
+    }
+
+    .saveBtn,
+    .secondaryBtn {
+        flex: 1;
+        justify-content: center;
+    }
+
+    .tableContainer {
+        margin: 0 -1rem;
+        padding: 0 1rem;
+        border-radius: 0;
+    }
+
+    .table th,
+    .table td {
+        padding: 0.6rem 0.75rem;
+        font-size: 0.875rem;
+    }
+
+    .markInput {
+        width: 50px;
+        padding: 0.4rem;
+    }
+}
+
+/* Mobile Breakpoint */
+@media (max-width: 480px) {
+    .welcomeText {
+        font-size: 1.25rem;
+    }
+
+    .subtitle {
+        font-size: 0.85rem;
+    }
+
+    .sectionTitle {
+        font-size: 1.1rem;
+        margin-bottom: 1rem;
+    }
+
+    .analyticsCard {
+        padding: 1rem;
+    }
+
+    .analyticsTitle {
+        font-size: 0.75rem;
+    }
+
+    .statValue {
+        font-size: 1.25rem;
+    }
+
+    .statLabel {
+        font-size: 0.75rem;
+    }
+
+    .subjectCard {
+        padding: 1rem;
+    }
+
+    .subjectName {
+        font-size: 1rem;
+    }
+
+    .quickActionsGrid {
+        grid-template-columns: 1fr 1fr;
+        gap: 0.75rem;
+    }
+
+    .actionBtn {
+        padding: 0.75rem;
+        font-size: 0.8rem;
+    }
+
+    .labCard {
+        padding: 1rem;
+    }
+
+    .scheduleTime {
+        min-width: 65px;
+        padding: 0.4rem;
+    }
+
+    .day {
+        font-size: 0.8rem;
+    }
+
+    .time {
+        font-size: 0.7rem;
+    }
+
+    .labName {
+        font-size: 0.85rem;
+    }
+
+    .batch {
+        font-size: 0.75rem;
+    }
+
+    .backBtn {
+        font-size: 0.8rem;
+    }
+
+    .saveBtn,
+    .secondaryBtn {
+        font-size: 0.8rem;
+        padding: 0.5rem 0.75rem;
+    }
+
+    .table {
+        font-size: 0.8rem;
+    }
+
+    .table th {
+        padding: 0.5rem;
+        font-size: 0.75rem;
+    }
+
+    .table td {
+        padding: 0.5rem;
+    }
+
+    .markInput {
+        width: 45px;
+        padding: 0.3rem;
+        font-size: 0.85rem;
+    }
+
+    .badge {
+        font-size: 0.65rem;
+        padding: 0.15rem 0.4rem;
+    }
+}
+
+/* Toast Notification Styles */
+.toast {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    background: #10b981;
+    color: white;
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    z-index: 1000;
+    animation: slideInRight 0.3s ease-out;
+}
+
+.toast.error {
+    background: #ef4444;
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}

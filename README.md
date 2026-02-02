@@ -68,3 +68,14 @@ This section has moved here: [https://facebook.github.io/create-react-app/docs/d
 ### `npm run build` fails to minify
 
 This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+
+## Login Credentials
+
+Use the following User IDs to log in as different roles. The password can be any string with at least **3 characters**.
+
+| Role      | User ID Examples           |
+| :---      | :---                       |
+| Student   | `DIP/2024/CS/001`, `S001`  |
+| Faculty   | `FAC/CS/001`, `F001`       |
+| HOD       | `HOD/CS/001`, `H001`       |
+| Principal | `PRIN/001`, `P001`, `ADMIN`|

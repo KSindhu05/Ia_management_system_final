@@ -1,0 +1,211 @@
+.sidebar {
+    width: 260px;
+    height: 100vh;
+    background-color: #111827;
+    /* Dark background */
+    color: white;
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    left: 0;
+    top: 0;
+    padding: 1.5rem;
+    z-index: 100;
+}
+
+.logoSection {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid #374151;
+}
+
+.logoText {
+    display: flex;
+    flex-direction: column;
+}
+
+.collegeName {
+    font-weight: 700;
+    font-size: 1rem;
+    line-height: 1.2;
+}
+
+.subtext {
+    font-size: 0.75rem;
+    color: #9ca3af;
+}
+
+.userInfo {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 2rem;
+    padding: 0.75rem;
+    background-color: #1f2937;
+    border-radius: 8px;
+}
+
+.avatar {
+    width: 36px;
+    height: 36px;
+    background-color: #3b82f6;
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 50%;
+    font-weight: 600;
+}
+
+.userDetails {
+    overflow: hidden;
+}
+
+.userName {
+    margin: 0;
+    font-size: 0.875rem;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.userRole {
+    margin: 0;
+    font-size: 0.7rem;
+    color: #9ca3af;
+    letter-spacing: 0.5px;
+}
+
+.nav {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    flex: 1;
+    overflow-y: auto;
+}
+
+.navItem {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    color: #d1d5db;
+    text-decoration: none;
+    font-size: 0.875rem;
+    transition: all 0.2s;
+}
+
+.navItem:hover {
+    background-color: #374151;
+    color: white;
+}
+
+.active {
+    background-color: #2563eb;
+    color: white;
+}
+
+.themeToggle {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    margin-top: auto;
+    margin-bottom: 0.5rem;
+    border: 1px solid #374151;
+    background: rgba(255, 255, 255, 0.05);
+    color: #d1d5db;
+    cursor: pointer;
+    font-size: 0.875rem;
+    width: 100%;
+    border-radius: 8px;
+    transition: all 0.2s;
+}
+
+.themeToggle:hover {
+    background-color: #374151;
+    color: white;
+}
+
+.logoutButton {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    /* margin-top: auto; Removed auto margin here as themeToggle takes it */
+    border: none;
+    background: none;
+    color: #ef4444;
+    /* Red color for logout */
+    cursor: pointer;
+    font-size: 0.875rem;
+    width: 100%;
+    border-radius: 8px;
+    transition: background-color 0.2s;
+}
+
+.logoutButton:hover {
+    background-color: rgba(239, 68, 68, 0.1);
+}
+
+/* ===== RESPONSIVE SIDEBAR ===== */
+@media (max-width: 768px) {
+    .sidebar {
+        width: 100%;
+        height: auto;
+        position: relative;
+        padding: 1rem;
+    }
+
+    .logoSection {
+        margin-bottom: 1rem;
+        padding-bottom: 1rem;
+    }
+
+    .userInfo {
+        margin-bottom: 1rem;
+    }
+
+    .nav {
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .navItem {
+        flex: 1 1 auto;
+        justify-content: center;
+        padding: 0.5rem 0.75rem;
+        font-size: 0.8rem;
+    }
+
+    .themeToggle,
+    .logoutButton {
+        flex: 1;
+    }
+}
+
+@media (max-width: 480px) {
+    .sidebar {
+        padding: 0.75rem;
+    }
+
+    .collegeName {
+        font-size: 0.9rem;
+    }
+
+    .navItem {
+        font-size: 0.75rem;
+        padding: 0.5rem;
+    }
+
+    .navItem svg {
+        width: 16px;
+        height: 16px;
+    }
+}

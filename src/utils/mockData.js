@@ -396,11 +396,11 @@ export const COLLEGE_DETAILS = {
 };
 
 export const hodSubmissionStatus = [
-    { id: 'CS', dept: 'Computer Science', hod: 'MD Jaffar', status: 'Approved', punctuality: 'On Time' },
-    { id: 'ME', dept: 'Mechanical', hod: 'Prof. A. Singh', status: 'Pending', punctuality: 'Delayed' },
-    { id: 'EE', dept: 'Electrical', hod: 'Prof. K. Reddy', status: 'Approved', punctuality: 'On Time' },
-    { id: 'CV', dept: 'Civil', hod: 'Prof. M. Gowda', status: 'Submitted', punctuality: 'On Time' },
-    { id: 'MME', dept: 'Metallurgical', hod: 'Prof. S. Bose', status: 'Pending', punctuality: 'Delayed' }
+    { id: 'CS', dept: 'Computer Science', hod: 'MD Jaffar', status: 'Approved', punctuality: 'On Time', submissionDate: '2025-10-15', delayDays: 0, completion: 100, priority: 'Normal', remarks: 'All Verified' },
+    { id: 'ME', dept: 'Mechanical', hod: 'Prof. A. Singh', status: 'Pending', punctuality: 'Delayed', submissionDate: '-', delayDays: 5, completion: 45, priority: 'High Priority', remarks: 'Faculty delay' },
+    { id: 'EE', dept: 'Electrical', hod: 'Prof. K. Reddy', status: 'Approved', punctuality: 'On Time', submissionDate: '2025-10-16', delayDays: 0, completion: 100, priority: 'Normal', remarks: 'Verified' },
+    { id: 'CV', dept: 'Civil', hod: 'Prof. M. Gowda', status: 'Submitted', punctuality: 'On Time', submissionDate: '2025-10-14', delayDays: 0, completion: 90, priority: 'Normal', remarks: 'Verification pending' },
+    { id: 'MME', dept: 'Metallurgical', hod: 'Prof. S. Bose', status: 'Pending', punctuality: 'Delayed', submissionDate: '-', delayDays: 8, completion: 30, priority: 'High Priority', remarks: 'Data Missing' }
 ];
 
 export const academicTrends = {
@@ -451,3 +451,38 @@ export const heatmapData = Array.from({ length: 120 }, (_, i) => ({
     score: Math.floor(Math.random() * 50) + 50, // Score 50-100
     status: Math.random() > 0.8 ? 'Risk' : (Math.random() > 0.5 ? 'Average' : 'Excellent')
 }));
+
+// --- PRINCIPAL SIDEBAR DATA (NEW) ---
+
+export const principalFacultyList = [
+    { id: 'F001', name: 'Dr. Suresh Kumar', dept: 'CS', designation: 'Asst. Professor', workload: '18 Hrs/Wk', status: 'Active' },
+    { id: 'F002', name: 'Prof. Anjali', dept: 'CS', designation: 'Lecturer', workload: '22 Hrs/Wk', status: 'Active' },
+    { id: 'F003', name: 'Prof. Vikram', dept: 'ME', designation: 'HOD', workload: '12 Hrs/Wk', status: 'On Leave' },
+    { id: 'F004', name: 'Dr. Sarah Smith', dept: 'EC', designation: 'Professor', workload: '16 Hrs/Wk', status: 'Active' },
+    { id: 'F005', name: 'Prof. Rajesh', dept: 'CV', designation: 'Lecturer', workload: '20 Hrs/Wk', status: 'Active' },
+];
+
+export const principalTimetables = [
+    { id: 1, dept: 'Computer Science', semester: '2nd Sem', updated: '2 days ago', link: '#' },
+    { id: 2, dept: 'Computer Science', semester: '4th Sem', updated: '2 days ago', link: '#' },
+    { id: 3, dept: 'Mechanical', semester: '2nd Sem', updated: '1 week ago', link: '#' },
+    { id: 4, dept: 'Civil Engineering', semester: 'All Sems', updated: '3 days ago', link: '#' },
+];
+
+export const principalCirculars = [
+    { id: 101, date: '2025-10-20', title: 'Holiday Declaration - Deepavali', target: 'All Staff & Students', status: 'Sent' },
+    { id: 102, date: '2025-10-18', title: 'IA-2 Marks Submission Deadline', target: 'Faculty Only', status: 'Sent' },
+    { id: 103, date: '2025-10-15', title: 'Campus Recruitments - Infosys', target: 'Final Year Students', status: 'Sent' },
+];
+
+export const principalReports = [
+    { id: 1, name: 'IA-1 Consolidated Marks Report', type: 'PDF', size: '2.4 MB', date: 'Oct 10, 2025' },
+    { id: 2, name: 'Monthly Attendance Report (Sept)', type: 'Excel', size: '1.1 MB', date: 'Oct 05, 2025' },
+    { id: 3, name: 'Faculty Workload Analysis', type: 'PDF', size: '0.8 MB', date: 'Sept 20, 2025' },
+];
+
+export const principalGrievances = [
+    { id: 'G01', student: 'Rahul (CS)', issue: 'Water Cooler not working in Block A', date: 'Today', status: 'Open', priority: 'Medium' },
+    { id: 'G02', student: 'Sneha (EC)', issue: 'Library books unavailable for DSP', date: 'Yesterday', status: 'Resolved', priority: 'High' },
+    { id: 'G03', student: 'Arjun (ME)', issue: 'Bus Route #4 Delay', date: 'Oct 18', status: 'Open', priority: 'Low' },
+];

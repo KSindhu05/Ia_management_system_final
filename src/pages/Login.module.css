@@ -320,11 +320,32 @@
 
   .leftPanel {
     display: none;
-    /* Hide image on mobile or make it a top banner */
+    /* Keep hidden on tablets/mobile to focus on login */
   }
 
   .rightPanel {
     flex: 1;
     padding: 1.5rem;
+    background: #f8fafc;
+    /* Simpler background for mobile */
+  }
+
+  .loginCard {
+    box-shadow: none;
+    /* Remove heavy shadows on mobile */
+    background: transparent;
+    border: none;
+    backdrop-filter: none;
+    padding: 1rem;
+    max-width: 100%;
+  }
+
+  .collegeLogo {
+    width: 200px;
+    /* Smaller logo */
+  }
+
+  .collegeName {
+    font-size: 1.2rem;
   }
 }

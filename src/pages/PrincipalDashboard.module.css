@@ -50,21 +50,25 @@
 }
 
 .glassCard {
-    background: rgba(255, 255, 255, 0.7);
-    backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.8);
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    background: rgba(255, 255, 255, 0.95);
+    /* Higher opacity instead of blur */
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    /* Lighter shadow */
     border-radius: 16px;
     padding: 1.5rem;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
     transition: transform 0.2s, box-shadow 0.2s;
+    will-change: transform;
+    /* Hardware accelerate hover */
 }
 
 .glassCard:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    transform: translateY(-2px);
+    /* Reduced movement */
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08);
 }
 
 .cardIcon {
@@ -501,6 +505,84 @@
     transition: background 0.2s;
 }
 
-.primaryBtn:hover {
-    background: #1d4ed8;
+/* Mobile Responsive Breakpoints */
+
+@media (max-width: 768px) {
+    .header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1.5rem;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .headerActions {
+        width: 100%;
+        justify-content: space-between;
+        flex-wrap: wrap;
+    }
+
+    .sentinelContainer {
+        margin-left: 0;
+        width: 100%;
+        order: 3;
+        /* Move search below buttons on mobile if needed */
+        margin-top: 1rem;
+    }
+
+    .searchBarInput {
+        width: 100%;
+    }
+
+    .searchBarInput:focus {
+        width: 100%;
+    }
+
+    .metricsGrid {
+        grid-template-columns: 1fr;
+        /* Stack cards vertically */
+        gap: 1rem;
+    }
+
+    .chartsRow {
+        grid-template-columns: 1fr;
+    }
+
+    .quickActionsGrid {
+        grid-template-columns: repeat(2, 1fr);
+        /* 2x2 grid on mobile for actions */
+        gap: 1rem;
+    }
+
+    .chartContainer {
+        height: 300px;
+        /* Smaller charts */
+    }
+
+    .table th,
+    .table td {
+        padding: 0.75rem 0.5rem;
+        font-size: 0.85rem;
+    }
+
+    /* Force horizontal scroll for tables if needed */
+    .tableCard {
+        overflow-x: auto;
+        padding: 1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .quickActionsGrid {
+        grid-template-columns: 1fr;
+        /* Full width actions on very small screens */
+    }
+
+    .cardValue {
+        font-size: 1.75rem;
+    }
+
+    .glassCard {
+        padding: 1rem;
+    }
 }

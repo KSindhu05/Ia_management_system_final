@@ -798,6 +798,100 @@
     color: #64748b;
 }
 
+/* ===== RESPONSIVE BREAKPOINTS ===== */
+
+@media (max-width: 1024px) {
+
+    .gridTwoOne,
+    .gridTwo {
+        grid-template-columns: 1fr;
+        /* Stack grids */
+    }
+
+    .statsRow {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .dashboardContainer {
+        height: auto;
+        min-height: 100vh;
+        flex-direction: column;
+        /* Ensure layout flows vertically */
+        overflow-y: auto;
+        /* Allow body scroll */
+    }
+
+    .mainContent {
+        height: auto;
+        overflow: visible;
+    }
+
+    .topHeader {
+        padding: 1rem;
+        height: auto;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+
+    .headerRight {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .searchWrapper {
+        display: none;
+        /* Hide top search to save space, or move it */
+    }
+
+    .scrollableContent {
+        padding: 1rem;
+        height: auto;
+        overflow: visible;
+    }
+
+    .statsRow {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    /* Charts need to shrink */
+    .chartContainer,
+    .doughnutContainer {
+        height: 250px;
+    }
+
+    .quickActions {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    /* Make tables scroll */
+    .tableWrapper {
+        overflow-x: auto;
+    }
+
+    .modalContent {
+        width: 95%;
+        margin: 1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .quickActions {
+        grid-template-columns: 1fr;
+    }
+
+    .deptSelector {
+        width: 100%;
+    }
+
+    .deptSelect {
+        flex: 1;
+    }
+}
+
 .approvlActions {
     display: flex;
     gap: 0.75rem;

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import DashboardLayout from '../components/DashboardLayout';
-import { LayoutDashboard, Users, FilePlus, Save, AlertCircle, Upload, Phone, FileText, CheckCircle, Search, Filter, Mail, X, Download } from 'lucide-react';
+import { LayoutDashboard, Users, FilePlus, Save, AlertCircle, Upload, Phone, FileText, CheckCircle, Search, Filter, Mail, X, Download, Clock, BarChart2, TrendingDown, Award } from 'lucide-react';
 import { facultyData, facultySubjects, studentsList, facultyClassAnalytics, labSchedule, englishMarks, mathsMarks, caegMarks } from '../utils/mockData';
 import styles from './FacultyDashboard.module.css';
 
@@ -304,15 +304,15 @@ const FacultyDashboard = () => {
                     <div className={styles.analyticsContent}>
                         <div className={styles.statItem}>
                             <span className={styles.statValue}>{facultySubjects.reduce((acc, curr) => acc + curr.studentCount, 0)}</span>
-                            <span className={styles.statLabel}>Total Students</span>
+                            <span className={styles.statLabel}><Users size={14} /> Total Students</span>
                         </div>
                         <div className={styles.statItem}>
                             <span className={styles.statValue}>{facultyClassAnalytics.evaluated}</span>
-                            <span className={styles.statLabel}>Evaluated</span>
+                            <span className={styles.statLabel}><CheckCircle size={14} /> Evaluated</span>
                         </div>
                         <div className={styles.statItem}>
                             <span className={styles.statValue}>{facultyClassAnalytics.pending}</span>
-                            <span className={styles.statLabel}>Pending</span>
+                            <span className={styles.statLabel}><Clock size={14} /> Pending</span>
                         </div>
                     </div>
                 </div>
@@ -321,15 +321,15 @@ const FacultyDashboard = () => {
                     <div className={styles.analyticsContent}>
                         <div className={styles.statItem}>
                             <span className={styles.statValue}>{facultyClassAnalytics.avgScore}%</span>
-                            <span className={styles.statLabel}>Avg Score</span>
+                            <span className={styles.statLabel}><BarChart2 size={14} /> Avg Score</span>
                         </div>
                         <div className={styles.statItem}>
                             <span className={styles.statValue}>{facultyClassAnalytics.lowPerformers}</span>
-                            <span className={styles.statLabel}>Low Performers</span>
+                            <span className={styles.statLabel}><TrendingDown size={14} /> Low Performers</span>
                         </div>
                         <div className={styles.statItem}>
                             <span className={styles.statValue}>{facultyClassAnalytics.topPerformers}</span>
-                            <span className={styles.statLabel}>Top Performers</span>
+                            <span className={styles.statLabel}><Award size={14} /> Top Performers</span>
                         </div>
                     </div>
                 </div>
@@ -472,9 +472,8 @@ const FacultyDashboard = () => {
         if (!selectedSubject) {
             return (
                 <div className={styles.emptyState}>
-                    <div className={styles.emptyStateIcon}><FilePlus size={48} /></div>
-                    <h3>Select a Subject to Enter Marks</h3>
-                    <p>Click on a subject card above (Overview) or navigate to My Students.</p>
+
+
                     <div className={styles.cardsGrid}>
                         {subjects.map(sub => (
                             <div key={sub.id} className={styles.subjectCard} onClick={() => handleSubjectClick(sub)}>

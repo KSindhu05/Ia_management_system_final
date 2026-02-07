@@ -55,12 +55,9 @@ const FacultyDashboard = () => {
                 console.error("Failed to fetch students", e);
             }
 
-            // Fetch Subjects (By Dept)
+            // Fetch Subjects (By Faculty Assignment)
             try {
-                // Assuming user.department stores the Dept code (e.g., 'CS')
-                // Only fetch if available
-                const dept = user.department || user.dept || 'CS';
-                const subRes = await fetch(`http://127.0.0.1:8083/api/subjects/department/${dept}`, { headers });
+                const subRes = await fetch(`${API_BASE}/faculty/my-subjects`, { headers });
                 if (subRes.ok) {
                     setSubjects(await subRes.json());
                 }
@@ -413,8 +410,9 @@ const FacultyDashboard = () => {
                         const sId = m.student.id;
                         if (!newMarks[sId]) newMarks[sId] = { cie1: '', cie2: '', cie3: '', cie4: '', cie5: '' };
 
-                        const key = m.iaType.toLowerCase(); // cie1
-                        newMarks[sId][key] = m.totalScore || ''; // Use totalScore
+                        // Backend returns 'cieType' (e.g., 'CIE1'), not 'iaType'
+                        const key = (m.cieType || m.iaType || '').toLowerCase(); // cie1
+                        if (key) newMarks[sId][key] = m.totalScore || ''; // Use totalScore
                     }
                 });
                 setMarks(newMarks);

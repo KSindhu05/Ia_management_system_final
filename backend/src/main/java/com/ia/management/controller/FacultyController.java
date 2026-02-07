@@ -23,4 +23,9 @@ public class FacultyController {
     public java.util.List<com.ia.management.model.Student> getStudents(java.security.Principal principal) {
         return facultyService.getStudentsForFaculty(principal.getName());
     }
+
+    @GetMapping("/my-subjects")
+    public java.util.List<com.ia.management.model.Subject> getMySubjects(java.security.Principal principal) {
+        return facultyService.getSubjectsForFaculty(principal.getName());
+    }
 }

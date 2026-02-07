@@ -17,7 +17,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-@Component
+// @Component // DISABLED - Using DataSeeder.java instead which has real CSV data
 public class DataInitializer implements CommandLineRunner {
 
     @Autowired

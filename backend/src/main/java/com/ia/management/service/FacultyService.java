@@ -28,10 +28,15 @@ public class FacultyService {
                                 .department(user.getDepartment())
                                 .build();
 
-                // 2. Fetch Subjects linked to this Department
-                // Ideally we should have a mapping of Faculty -> Subjects, but for now using
-                // Dept
-                var subjectsEntities = subjectRepository.findByDepartment(user.getDepartment());
+                // 2. Fetch Subjects linked to this Faculty
+                var subjectsEntities = subjectRepository.findByFacultyUsername(username);
+
+                // If no specific subjects assigned, falling back to department?
+                // No, user requirement is specific assignment.
+                if (subjectsEntities.isEmpty()) {
+                        // Empty list or maybe fallback for existing data without faculty?
+                        // For now let's stick to strict assignment to show only "their subject"
+                }
                 var subjects = subjectsEntities.stream().map(s -> {
                         // Count students in this semester/dept
                         int count = studentRepository.findByDepartmentAndSemester(s.getDepartment(), s.getSemester())
@@ -77,5 +82,9 @@ public class FacultyService {
 
                 // Fetch students in the same department
                 return studentRepository.findByDepartment(user.getDepartment());
+        }
+
+        public java.util.List<com.ia.management.model.Subject> getSubjectsForFaculty(String username) {
+                return subjectRepository.findByFacultyUsername(username);
         }
 }

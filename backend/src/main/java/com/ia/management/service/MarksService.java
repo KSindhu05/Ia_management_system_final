@@ -148,7 +148,8 @@ public class MarksService {
         Student student = studentRepository.findByRegNo(regNo)
                 .orElseThrow(() -> new RuntimeException("Student record not found for RegNo: " + regNo));
 
-        return cieMarkRepository.findByStudentId(student.getId());
+        // Only return marks that have been APPROVED by HOD
+        return cieMarkRepository.findByStudentIdAndStatus(student.getId(), CIEMark.MarkStatus.APPROVED);
     }
 
     @Transactional

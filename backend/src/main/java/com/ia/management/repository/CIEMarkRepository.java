@@ -20,4 +20,6 @@ public interface CIEMarkRepository extends JpaRepository<CIEMark, Long> {
     List<CIEMark> findBySubjectIdAndCieType(Long subjectId, CIEMark.CIEType cieType);
 
     List<CIEMark> findByStatusAndSubject_Department(CIEMark.MarkStatus status, String department);
+
+    List<CIEMark> findByStudentIdAndStatus(Long studentId, CIEMark.MarkStatus status);
 }

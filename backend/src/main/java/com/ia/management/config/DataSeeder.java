@@ -73,15 +73,27 @@ public class DataSeeder implements CommandLineRunner {
     private void seedData() {
         System.out.println("Seeding Database...");
 
-        // 1. Create Subjects
-        Subject maths = createSubjectIfNotFound("SC202T", "Engineering Maths-II", "CS", "2nd", 50);
-        Subject english = createSubjectIfNotFound("HU201T", "English Communication", "CS", "2nd", 50);
-        Subject caeg = createSubjectIfNotFound("ME201T", "CAEG", "CS", "2nd", 50);
-        Subject python = createSubjectIfNotFound("CS201T", "Python", "CS", "2nd", 50);
+        // 1. Create Subjects - Assigning Faculty
+        Subject maths = createSubjectIfNotFound("SC202T", "Engineering Maths-II", "CS", "2nd", 50, "FAC001");
+        Subject english = createSubjectIfNotFound("HU201T", "English Communication", "CS", "2nd", 50, "FAC004");
+        Subject caeg = createSubjectIfNotFound("ME201T", "CAEG", "CS", "2nd", 50, "FAC002");
+        Subject python = createSubjectIfNotFound("CS201T", "Python", "CS", "2nd", 50, "FAC003");
 
         List<Subject> subjects = Arrays.asList(maths, english, caeg, python);
 
-        // 2. Student Data (CSV format: RegNo,Name,Subject,Marks,Attendance,ParentPhone)
+        // 2. Create Faculty Users
+        createFacultyIfNotFound("FAC001", "Miss Manju Sree", "Science/Maths", "manju.sree@college.edu");
+        createFacultyIfNotFound("FAC002", "Ramesh Gouda", "Mechanical", "ramesh.gouda@college.edu");
+        createFacultyIfNotFound("FAC003", "Wahida Banu", "CS", "wahida.banu@college.edu");
+        createFacultyIfNotFound("FAC004", "Nasrin Banu", "English", "nasrin.banu@college.edu");
+        createFacultyIfNotFound("FAC005", "Sunil Babu H", "CS", "sunil.babu@college.edu");
+        createFacultyIfNotFound("FAC006", "Shreedar Singh", "Humanities", "shreedar.singh@college.edu");
+
+        // 3. Create HOD and Principal
+        createHODIfNotFound("HOD001", "MD Jaffar", "CS", "jaffar.hod@college.edu");
+        createPrincipalIfNotFound("PRINCIPAL", "Dr. Gowri Shankar", "principal@college.edu");
+
+        // 4. Student Data (CSV format: RegNo,Name,Subject,Marks,Attendance,ParentPhone)
         String[] studentData = {
                 "459CS25001,A KAVITHA,Engineering Maths-II,20,87,9071407865",
                 "459CS25001,A KAVITHA,English Communication,15,62,9071407865",
@@ -403,11 +415,16 @@ public class DataSeeder implements CommandLineRunner {
         }
     }
 
-    private Subject createSubjectIfNotFound(String code, String name, String dept, String sem, Integer maxMarks) {
+    private Subject createSubjectIfNotFound(String code, String name, String dept, String sem, Integer maxMarks,
+            String facultyUsername) {
         return subjectRepository.findAll().stream()
                 .filter(s -> s.getCode().equals(code))
                 .findFirst()
-                .orElseGet(() -> subjectRepository.save(new Subject(null, code, name, dept, sem, maxMarks, "Theory")));
+                .orElseGet(() -> {
+                    Subject s = new Subject(null, code, name, dept, sem, maxMarks, "Theory");
+                    s.setFacultyUsername(facultyUsername);
+                    return subjectRepository.save(s);
+                });
     }
 
     private Double parseDouble(String val) {
@@ -415,6 +432,50 @@ public class DataSeeder implements CommandLineRunner {
             return Double.parseDouble(val);
         } catch (NumberFormatException e) {
             return 0.0;
+        }
+    }
+
+    private void createFacultyIfNotFound(String username, String fullName, String department, String email) {
+        if (userRepository.findByUsername(username).isEmpty()) {
+            User user = new User();
+            user.setUsername(username);
+            user.setPassword(passwordEncoder.encode("password"));
+            user.setRole(User.Role.FACULTY);
+            user.setAssociatedId(username);
+            user.setFullName(fullName);
+            user.setDepartment(department);
+            user.setEmail(email);
+            userRepository.save(user);
+            System.out.println("Created Faculty: " + fullName);
+        }
+    }
+
+    private void createHODIfNotFound(String username, String fullName, String department, String email) {
+        if (userRepository.findByUsername(username).isEmpty()) {
+            User user = new User();
+            user.setUsername(username);
+            user.setPassword(passwordEncoder.encode("password"));
+            user.setRole(User.Role.HOD);
+            user.setAssociatedId(username);
+            user.setFullName(fullName);
+            user.setDepartment(department);
+            user.setEmail(email);
+            userRepository.save(user);
+            System.out.println("Created HOD: " + fullName);
+        }
+    }
+
+    private void createPrincipalIfNotFound(String username, String fullName, String email) {
+        if (userRepository.findByUsername(username).isEmpty()) {
+            User user = new User();
+            user.setUsername(username);
+            user.setPassword(passwordEncoder.encode("password"));
+            user.setRole(User.Role.PRINCIPAL);
+            user.setAssociatedId(username);
+            user.setFullName(fullName);
+            user.setEmail(email);
+            userRepository.save(user);
+            System.out.println("Created Principal: " + fullName);
         }
     }
 }

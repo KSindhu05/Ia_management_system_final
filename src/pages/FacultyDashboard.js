@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import DashboardLayout from '../components/DashboardLayout';
 import { useAuth } from '../context/AuthContext';
-import { LayoutDashboard, Users, FilePlus, Save, AlertCircle, Phone, FileText, CheckCircle, Search, Filter, Mail, X, Download, Clock, BarChart2, TrendingDown, Award, ClipboardList, AlertTriangle, Edit3, Calendar, UserCheck, BookOpen, Upload, Megaphone } from 'lucide-react';
+import { LayoutDashboard, Users, FilePlus, Save, AlertCircle, Phone, FileText, CheckCircle, Search, Filter, Mail, X, Download, Clock, BarChart2, TrendingDown, Award, ClipboardList, AlertTriangle, Edit3, Calendar, UserCheck, BookOpen, Upload, Megaphone, Lock } from 'lucide-react';
 import { facultyData, facultyProfiles, facultySubjects, studentsList, facultyClassAnalytics, labSchedule, getMenteesForFaculty } from '../utils/mockData';
 import styles from './FacultyDashboard.module.css';
 
@@ -24,7 +24,13 @@ const FacultyDashboard = () => {
     const currentFaculty = facultyProfiles.find(f => f.id === user?.id) || facultyData;
 
     // Filter Subjects for this Faculty
-    const mySubjects = facultySubjects.filter(sub => sub.instructorId === currentFaculty.id);
+    // Filter Subjects for this Faculty
+    const mySubjects = subjects.length > 0
+        ? subjects.map(s => ({
+            ...s,
+            studentCount: students.filter(st => st.semester === s.semester).length || 0
+        }))
+        : facultySubjects.filter(sub => sub.instructorId === currentFaculty.id);
 
     // Filter Mentees
     const myMentees = getMenteesForFaculty(currentFaculty.id);
@@ -33,46 +39,39 @@ const FacultyDashboard = () => {
     const attendanceDefaulters = studentsList.filter(s => s.attendance < 75);
 
     React.useEffect(() => {
-        // Fallback to Mock Data
-        // setSubjects(facultySubjects); // Use filtered mySubjects instead
-        setStudents(studentsList);    // Use imported mock data directly
+        if (!user || !user.token) return;
 
-        // Initialize Global Marks State
-        const initialMarks = {};
+        const fetchInitialData = async () => {
+            const headers = { 'Authorization': `Bearer ${user.token}` };
 
-        // Pre-initialize subject keys to avoid undefined errors
-        const subjectIds = [1, 2, 3, 4]; // Maths, English, CAEG, Python
-        subjectIds.forEach(id => {
-            initialMarks[id] = {};
-        });
-
-        // Also ensure any other faculty subjects are init
-        facultySubjects.forEach(sub => {
-            if (!initialMarks[sub.id]) initialMarks[sub.id] = {};
-        });
-
-        studentsList.forEach((student, index) => {
-            const subIds = [1, 2, 3, 4];
-            subIds.forEach(id => {
-                if (initialMarks[id]) {
-                    // Force low marks for some students to demo "Low Performers"
-                    const isLowPerformer = index % 5 === 0; // Every 5th student
-                    const min = isLowPerformer ? 5 : 15;
-                    const max = isLowPerformer ? 14 : 30;
-
-                    initialMarks[id][student.id] = {
-                        cie1: Math.floor(Math.random() * (max - min + 1)) + min,
-                        cie2: Math.floor(Math.random() * (max - min + 1)) + min,
-                        cie3: Math.floor(Math.random() * (max - min + 1)) + min,
-                        cie4: Math.floor(Math.random() * (max - min + 1)) + min,
-                        cie5: Math.floor(Math.random() * (max - min + 1)) + min
-                    };
+            // Fetch Students
+            try {
+                const sRes = await fetch(`${API_BASE}/students`, { headers });
+                if (sRes.ok) {
+                    const data = await sRes.json();
+                    setStudents(data);
                 }
-            });
-        });
-        setAllStudentMarks(initialMarks);
+            } catch (e) {
+                console.error("Failed to fetch students", e);
+            }
 
-    }, []);
+            // Fetch Subjects (By Dept)
+            try {
+                // Assuming user.department stores the Dept code (e.g., 'CS')
+                // Only fetch if available
+                const dept = user.department || user.dept || 'CS';
+                const subRes = await fetch(`http://127.0.0.1:8083/api/subjects/department/${dept}`, { headers });
+                if (subRes.ok) {
+                    setSubjects(await subRes.json());
+                }
+            } catch (e) {
+                console.error("Failed to fetch subjects", e);
+            }
+        };
+
+        fetchInitialData();
+        // Fallback or initialization of mock data if needed removed as we prefer API
+    }, [user]);
 
     // -- Global Marks State for Real-time Updates --
     const [allStudentMarks, setAllStudentMarks] = useState({}); // { subjectId: { studentId: { cie1, cie2 } } }
@@ -100,10 +99,70 @@ const FacultyDashboard = () => {
         setSavedAttendance(false);
     };
 
-    const saveAttendance = () => {
-        setSavedAttendance(true);
-        showToast('Attendance Saved Successfully!');
+    const saveAttendance = async () => {
+        if (!selectedSubject) return;
+        setSaving(true);
+        try {
+            const classStudents = students.filter(s => s.semester === selectedSubject.semester);
+            const key = `${selectedSubject.id}-${attendanceDate}`;
+            const currentData = attendanceData[key] || {};
+
+            const records = classStudents.map(s => ({
+                studentId: s.id,
+                status: (currentData[s.id] || 'Present').toUpperCase()
+            }));
+
+            const token = localStorage.getItem('token');
+            const headers = { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) };
+
+            const res = await fetch(`http://127.0.0.1:8083/api/attendance/update`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({
+                    subjectId: selectedSubject.id,
+                    date: attendanceDate,
+                    records
+                })
+            });
+
+            if (res.ok) {
+                setSavedAttendance(true);
+                showToast('Attendance Saved Successfully!', 'success');
+            } else {
+                const txt = await res.text();
+                showToast('Failed: ' + txt, 'error');
+            }
+        } catch (e) {
+            console.error(e);
+            showToast('Error saving attendance', 'error');
+        } finally {
+            setSaving(false);
+        }
     };
+
+    // Fetch Attendance
+    React.useEffect(() => {
+        if (activeSection === 'Attendance' && selectedSubject && attendanceDate) {
+            const fetchAtt = async () => {
+                try {
+                    const token = localStorage.getItem('token');
+                    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+                    const res = await fetch(`http://127.0.0.1:8083/api/attendance?subjectId=${selectedSubject.id}&date=${attendanceDate}`, { headers });
+                    if (res.ok) {
+                        const data = await res.json();
+                        // data is list { studentId, status }
+                        const map = {};
+                        data.forEach(r => { map[r.studentId] = r.status === 'PRESENT' ? 'Present' : 'Absent'; });
+
+                        const key = `${selectedSubject.id}-${attendanceDate}`;
+                        setAttendanceData(prev => ({ ...prev, [key]: map }));
+                        setSavedAttendance(true);
+                    }
+                } catch (e) { console.error(e); }
+            };
+            fetchAtt();
+        }
+    }, [activeSection, selectedSubject, attendanceDate]);
 
     // -- Syllabus State --
     const [lessonPlanData, setLessonPlanData] = useState(() => {
@@ -132,7 +191,9 @@ const FacultyDashboard = () => {
         date: '',
         duration: '60',
         syllabus: '',
-        instructions: ''
+        instructions: '',
+        room: '',
+        time: ''
     });
 
     const handleIaConfigChange = (e) => {
@@ -140,28 +201,86 @@ const FacultyDashboard = () => {
         setIaConfig(prev => ({ ...prev, [name]: value }));
     };
 
+    React.useEffect(() => {
+        if (activeSection === 'CIE Schedule' && iaConfig.subjectId && iaConfig.cieNumber) {
+            fetchSchedule();
+        }
+    }, [iaConfig.subjectId, iaConfig.cieNumber, activeSection]);
+
+    const fetchSchedule = async () => {
+        try {
+            const token = localStorage.getItem('token'); // Assuming auth token
+            const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+
+            // Fix API Base URL usage
+            const baseUrl = API_BASE.replace('/marks', '');
+            const response = await fetch(`${baseUrl}/faculty/announcements/details?subjectId=${iaConfig.subjectId}&cieNumber=${iaConfig.cieNumber}`, {
+                headers
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data) {
+                    setIaConfig(prev => ({
+                        ...prev,
+                        date: data.scheduledDate || '',
+                        duration: data.durationMinutes || '60',
+                        syllabus: data.syllabusCoverage || '',
+                        instructions: data.instructions || '',
+                        room: data.examRoom || '',
+                        time: data.startTime || ''
+                    }));
+                } else {
+                    // Reset schedule details if not found (or keeping syllabus empty for new entry)
+                    setIaConfig(prev => ({ ...prev, date: '', duration: '60', syllabus: '', instructions: '', room: '', time: '' }));
+                }
+            }
+        } catch (e) {
+            console.error("Error fetching announcement details", e);
+        }
+    };
+
     const handleAnnouncementSubmit = async () => {
-        if (!iaConfig.subjectId || !iaConfig.date || !iaConfig.syllabus) {
-            showToast('Please fill all required fields', 'error');
+        if (!iaConfig.subjectId || !iaConfig.cieNumber) {
+            showToast('Please select Subject and CIE Number', 'error');
+            return;
+        }
+
+        if (!iaConfig.date) {
+            showToast('CIE has not been scheduled by HOD yet.', 'error');
             return;
         }
 
         try {
-            // Simulated API Call
-            // const response = await fetch('/api/faculty/announcements?subjectId=' + iaConfig.subjectId, { ... });
+            const token = localStorage.getItem('token');
+            const headers = {
+                'Content-Type': 'application/json',
+                ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+            };
 
-            // For now, simulate success
-            showToast(`CIE-${iaConfig.cieNumber} Announced Successfully!`, 'success');
+            const baseUrl = API_BASE.replace('/marks', '');
 
-            // Reset form
-            setIaConfig({
-                subjectId: '',
-                cieNumber: '1',
-                date: '',
-                duration: '60',
-                syllabus: '',
-                instructions: ''
+            const payload = {
+                cieNumber: parseInt(iaConfig.cieNumber),
+                scheduledDate: iaConfig.date || null, // Allow null if not set
+                durationMinutes: parseInt(iaConfig.duration) || 60,
+                syllabusCoverage: iaConfig.syllabus,
+                instructions: iaConfig.instructions,
+                examRoom: iaConfig.room,
+                startTime: iaConfig.time || null
+            };
+
+            const response = await fetch(`${baseUrl}/faculty/announcements?subjectId=${iaConfig.subjectId}`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(payload)
             });
+
+            if (response.ok) {
+                showToast(`CIE-${iaConfig.cieNumber} Updated Successfully!`, 'success');
+            } else {
+                showToast('Failed to post announcement', 'error');
+            }
         } catch (error) {
             showToast('Failed to post announcement', 'error');
         }
@@ -239,6 +358,13 @@ const FacultyDashboard = () => {
             isActive: activeSection === 'My Students',
             onClick: () => { setActiveSection('My Students'); setSelectedSubject(null); }
         },
+        {
+            label: 'Attendance',
+            path: '/dashboard/faculty',
+            icon: <UserCheck size={20} />,
+            isActive: activeSection === 'Attendance',
+            onClick: () => { setActiveSection('Attendance'); setSelectedSubject(null); }
+        },
 
         {
             label: 'Lesson Plan',
@@ -278,34 +404,87 @@ const FacultyDashboard = () => {
         }, 3000);
     };
 
-    const handleSubjectClick = (subject) => {
+    const handleSubjectClick = async (subject) => {
         setSelectedSubject(subject);
         setActiveSection('CIE Entry');
-
-        // Populate 'marks' state from 'allStudentMarks'
-        const subjectMarks = allStudentMarks[subject.id] || {};
-        const formattedMarks = {};
-
-        // Ensure every student has an entry
-        studentsList.forEach(student => {
-            const sm = subjectMarks[student.id] || { cie1: '', cie2: '', cie3: '', cie4: '', cie5: '' };
-            formattedMarks[student.id] = {
-                'CIE1': {
-                    student: { id: student.id },
-                    iaType: 'CIE1',
-                    cie1Score: sm.cie1,
-                    cie2Score: sm.cie2
-                },
-                cie1: sm.cie1,
-                cie2: sm.cie2,
-                cie3: sm.cie3,
-                cie4: sm.cie4,
-                cie5: sm.cie5
-            };
-        });
-
-        setMarks(formattedMarks);
+        setMarks({}); // Clear previous
         setIsLocked(false);
+
+        try {
+            const token = localStorage.getItem('token');
+            const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+            const res = await fetch(`${API_BASE}/subject/${subject.id}`, { headers });
+
+            if (res.ok) {
+                const data = await res.json();
+                const newMarks = {};
+
+                // Initialize empty for all current students
+                students.forEach(s => {
+                    newMarks[s.id] = { cie1: '', cie2: '', cie3: '', cie4: '', cie5: '' };
+                });
+
+                data.forEach(m => {
+                    if (m.student && m.student.id) {
+                        const sId = m.student.id;
+                        if (!newMarks[sId]) newMarks[sId] = { cie1: '', cie2: '', cie3: '', cie4: '', cie5: '' };
+
+                        const key = m.iaType.toLowerCase(); // cie1
+                        newMarks[sId][key] = m.totalScore || ''; // Use totalScore
+                    }
+                });
+                setMarks(newMarks);
+                // Check Status for Lock
+                const firstMark = data.find(m => m.status);
+                if (firstMark && (firstMark.status === 'SUBMITTED' || firstMark.status === 'APPROVED')) {
+                    setIsLocked(true);
+                    showToast(`Marks for this subject are ${firstMark.status}`, 'info');
+                } else {
+                    setIsLocked(false);
+                }
+
+                setMarks(newMarks);
+            }
+        } catch (e) {
+            console.error("Error fetching marks", e);
+            showToast('Failed to fetch marks', 'error');
+        }
+    };
+
+    const handleSubmitForApproval = async () => {
+        if (!selectedSubject) return;
+        const confirm = window.confirm("Are you sure you want to SUBMIT marks to HOD? You will not be able to edit them afterwards.");
+        if (!confirm) return;
+
+        setSaving(true);
+        try {
+            // We need to submit for EACH IA type or All? 
+            // The backend supports subject+iaType.
+            // Currently the UI shows all columns.
+            // Let's assume we submit ALL types present? Or ask user?
+            // Simplification: We submit 'CIE1' as default or loop through all.
+            // Ideally we should have a selector for which IA to submit?
+            // The current UI shows all 5 columns.
+            // Let's submit ALL types.
+            const types = ['CIE1', 'CIE2', 'CIE3', 'CIE4', 'CIE5'];
+            const token = localStorage.getItem('token');
+            const headers = { 'Authorization': `Bearer ${token}` };
+
+            for (const type of types) {
+                await fetch(`${API_BASE}/submit?subjectId=${selectedSubject.id}&iaType=${type}`, {
+                    method: 'POST',
+                    headers
+                });
+            }
+
+            setIsLocked(true);
+            showToast('Marks Submitted for Approval!', 'success');
+        } catch (e) {
+            console.error(e);
+            showToast('Error submitting marks', 'error');
+        } finally {
+            setSaving(false);
+        }
     };
 
     const handleMarkChange = (studentId, field, value) => {
@@ -391,23 +570,70 @@ const FacultyDashboard = () => {
 
     const handleSave = async () => {
         setSaving(true);
-        const updates = [];
-
-        // Mock Save Operation
-        // We simulate a delay to show the "Saving..." state
-        const mockSave = new Promise((resolve) => {
-            setTimeout(() => {
-                resolve('Success');
-            }, 800);
-        });
-
-        updates.push(mockSave);
-
         try {
-            await Promise.all(updates);
-            setIsLocked(true); // Lock the form (Commit)
-            showToast('Changes Committed & Locked!', 'success');
+            const token = localStorage.getItem('token');
+            const headers = {
+                'Content-Type': 'application/json',
+                ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+            };
+
+            const payload = [];
+            Object.keys(marks).forEach(studentId => {
+                const sMarks = marks[studentId];
+                ['cie1', 'cie2', 'cie3', 'cie4', 'cie5'].forEach(key => {
+                    const val = sMarks[key];
+                    // Only send if it has a value (ignoring 'Ab' or empty string for now, or sending 0?)
+                    // If 'Ab', maybe send 0? existing logic 'Ab' => 0.
+                    // But payload expects Double.
+                    // If the user entered value, we send it.
+                    if (val !== undefined) {
+                        let score = 0;
+                        if (val === 'Ab' || val === '') score = 0;
+                        else score = parseFloat(val);
+
+                        // We should maybe only send if it's explicitly set? 
+                        // But for batch update, sending 0 is safer than not updating if it was previously set.
+                        // But we don't want to overwrite existing data with 0 if UI state is partial?
+                        // UI state `marks` is initialized with existing data in handleSubjectClick.
+                        // So it represents the COMPLETE desired state.
+                        // So sending everything is correct.
+
+                        // Skip if purely undefined/null
+                        if (val === null || val === undefined) return;
+
+                        payload.push({
+                            studentId: parseInt(studentId),
+                            subjectId: selectedSubject.id,
+                            iaType: key.toUpperCase(), // cie1 -> CIE1
+                            co1: score,
+                            co2: 0
+                        });
+                    }
+                });
+            });
+
+            if (payload.length === 0) {
+                showToast('No marks to save', 'info');
+                setSaving(false);
+                return;
+            }
+
+            const response = await fetch(`${API_BASE}/update/batch`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(payload)
+            });
+
+            if (response.ok) {
+                showToast('Changes Committed & Locked!', 'success');
+                setIsLocked(true);
+            } else {
+                const err = await response.text();
+                console.error(err);
+                showToast('Error saving marks: ' + err, 'error');
+            }
         } catch (e) {
+            console.error(e);
             showToast('Error saving marks', 'error');
         } finally {
             setSaving(false);
@@ -1035,13 +1261,19 @@ const FacultyDashboard = () => {
                             </button>
 
                             {!isLocked ? (
-                                <button className={`${styles.saveBtn} ${saving ? styles.saving : ''}`} onClick={handleSave} disabled={saving}>
-                                    <Save size={16} />
-                                    {saving ? 'Committing...' : 'Save Changes'}
-                                </button>
+                                <>
+                                    <button className={`${styles.saveBtn} ${saving ? styles.saving : ''}`} onClick={handleSave} disabled={saving}>
+                                        <Save size={16} />
+                                        {saving ? 'Saving...' : 'Save Draft'}
+                                    </button>
+
+                                    <button className={styles.saveBtn} onClick={handleSubmitForApproval} disabled={saving} style={{ backgroundColor: '#059669' }}>
+                                        <CheckCircle size={16} /> Submit to HOD
+                                    </button>
+                                </>
                             ) : (
-                                <button className={styles.secondaryBtn} onClick={handleEdit} style={{ borderColor: '#2563eb', color: '#2563eb' }}>
-                                    <Edit3 size={16} /> Enable Edit
+                                <button className={styles.secondaryBtn} disabled style={{ cursor: 'not-allowed', color: '#6b7280', borderColor: '#d1d5db' }}>
+                                    <Lock size={16} /> Marks Locked
                                 </button>
                             )}
 
@@ -1176,11 +1408,12 @@ const FacultyDashboard = () => {
         const key = `${selectedSubject.id}-${attendanceDate}`;
         const currentData = attendanceData[key] || {};
 
-        // Mock list of students
-        const classStudents = studentsList;
+        // Use Real Students
+        const classStudents = students.filter(s => s.semester === selectedSubject.semester);
 
         // Stats
         const total = classStudents.length;
+
         const presentCount = classStudents.filter(s => (currentData[s.id] || 'Present') === 'Present').length;
         const absentCount = total - presentCount;
 
@@ -1207,6 +1440,9 @@ const FacultyDashboard = () => {
                         </div>
                     </div>
                     <div className={styles.headerActions}>
+                        <button className={styles.saveBtn} onClick={() => window.open(`http://127.0.0.1:8083/api/reports/attendance/${selectedSubject.id}/csv`, '_blank')} style={{ marginRight: '1rem', backgroundColor: '#3b82f6' }}>
+                            <Download size={16} /> Export CSV
+                        </button>
                         <button className={styles.saveBtn} onClick={saveAttendance} disabled={savedAttendance}>
                             <Save size={16} />
                             {savedAttendance ? 'Saved' : 'Save Attendance'}
@@ -1506,18 +1742,13 @@ const FacultyDashboard = () => {
 
     // --- NEW FEATURE: CIE SCHEDULE UPDATE (Faculty) ---
     const renderCIESchedule = () => {
-        // Mock HOD Scheduled Data (This would come from API in real app)
-        const getMockSchedule = () => {
-            // In a real scenario, we'd fetch the schedule based on selected cieNumber & subject
-            return {
-                date: '2026-03-15',
-                time: '10:00 AM - 11:00 AM',
-                room: 'LH-302 (Block A)',
-                duration: '60 Minutes'
-            };
+        // Use iaConfig directly which is populated by fetchSchedule
+        const currentSchedule = {
+            date: iaConfig.date || '-',
+            time: iaConfig.time || '-',
+            room: iaConfig.room || '-',
+            duration: iaConfig.duration ? `${iaConfig.duration} Minutes` : '-'
         };
-
-        const currentSchedule = getMockSchedule();
 
         return (
             <div className={styles.sectionContainer}>
@@ -1625,7 +1856,7 @@ const FacultyDashboard = () => {
                                     <button
                                         className={styles.secondaryBtn}
                                         style={{ padding: '0.75rem 1.5rem', fontSize: '1rem' }}
-                                        onClick={() => setIaConfig({ ...iaConfig, syllabus: '', instructions: '' })}
+                                        onClick={() => setIaConfig(prev => ({ ...prev, syllabus: '', instructions: '' }))}
                                     >
                                         Clear
                                     </button>

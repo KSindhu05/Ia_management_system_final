@@ -14,4 +14,10 @@ public interface IAMarkRepository extends JpaRepository<IAMark, Long> {
     Optional<IAMark> findByStudentIdAndSubjectIdAndIaType(Long studentId, Long subjectId, IAMark.IAType iaType);
 
     List<IAMark> findByStudentId(Long studentId);
+
+    List<IAMark> findBySubject_Department(String department);
+
+    List<IAMark> findBySubjectIdAndIaType(Long subjectId, IAMark.IAType iaType);
+
+    List<IAMark> findByStatusAndSubject_Department(IAMark.MarkStatus status, String department);
 }

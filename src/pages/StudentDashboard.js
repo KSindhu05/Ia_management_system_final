@@ -280,9 +280,11 @@ const StudentDashboard = () => {
                     setUpcomingExams(anns.map(a => ({
                         id: a.id,
                         exam: `CIE-${a.cieNumber}`,
-                        subject: a.subject.name,
-                        date: a.scheduledDate, // Format if needed
-                        time: a.durationMinutes + ' mins',
+                        subject: a.subject?.name || 'Subject',
+                        date: a.scheduledDate,
+                        time: a.startTime ? a.startTime.substring(0, 5) : 'TBD',
+                        duration: a.durationMinutes + ' mins',
+                        room: a.examRoom || 'TBD',
                         instructions: a.instructions
                     })));
                 }
@@ -417,7 +419,9 @@ const StudentDashboard = () => {
                                         <div className={styles.examBadge}>{exam.exam}</div>
                                         <div className={styles.examInfo}>
                                             <span className={styles.examSubject}>{exam.subject}</span>
-                                            <span className={styles.examDate}>{exam.date} • {exam.time}</span>
+                                            <span className={styles.examDate}>
+                                                {exam.date} • {exam.time} • Room: {exam.room}
+                                            </span>
                                         </div>
                                         <Clock size={16} className={styles.examIcon} />
                                     </div>

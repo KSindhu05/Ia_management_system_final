@@ -158,7 +158,6 @@ const OverviewSection = memo(({ barData }) => (
                     <FacultyPerformanceWidget />
                     <ScheduleWidget />
                 </div>
-                <YearComparisonWidget />
             </div>
 
             {/* RIGHT COLUMN (Action Center & Approvals) */}
@@ -167,7 +166,6 @@ const OverviewSection = memo(({ barData }) => (
                 {/* FLOWCHART: PENDING IA APPROVALS */}
                 <PendingApprovalsWidget />
                 <FocusListWidget />
-                <NotesWidget />
             </div>
         </div>
 

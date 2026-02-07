@@ -36,7 +36,8 @@ public class Notification {
     }
 
     public enum NotificationType {
-        IA_ANNOUNCEMENT, MARKS_PUBLISHED, GENERAL, REMINDER
+        IA_ANNOUNCEMENT, MARKS_PUBLISHED, GENERAL, REMINDER,
+        MARKS_SUBMITTED, MARKS_APPROVED, MARKS_REJECTED
     }
 
     // Getters and Setters

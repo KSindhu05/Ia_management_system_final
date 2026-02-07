@@ -29,6 +29,10 @@ public class User {
     // Optional: Link to specific profiles
     private String associatedId; // e.g., Student RegNo or Faculty ID
 
+    private String department; // "CS", "EC", etc.
+    private String fullName;
+    private String email;
+
     public enum Role {
         STUDENT,
         FACULTY,

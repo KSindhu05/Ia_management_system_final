@@ -13,11 +13,13 @@ import java.util.List;
 public interface IAnnouncementRepository extends JpaRepository<IAnnouncement, Long> {
         List<IAnnouncement> findByFaculty(User faculty);
 
-        List<IAnnouncement> findBySubjectIdInAndScheduledDateAfterOrderByScheduledDateAsc(List<Long> subjectIds,
+        List<IAnnouncement> findBySubject_IdInAndScheduledDateAfterOrderByScheduledDateAsc(List<Long> subjectIds,
                         LocalDate date);
 
         List<IAnnouncement> findBySubject_DepartmentAndScheduledDateAfterOrderByScheduledDateAsc(String department,
                         LocalDate date);
+
+        java.util.Optional<IAnnouncement> findBySubjectIdAndCieNumber(Long subjectId, Integer cieNumber);
 
         // For HOD checks (department agnostic query, filtering done in service or by
         // department field if added to subject/user entities properly)

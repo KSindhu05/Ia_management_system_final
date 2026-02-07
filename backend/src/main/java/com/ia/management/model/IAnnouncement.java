@@ -28,6 +28,12 @@ public class IAnnouncement {
 
     private Integer durationMinutes = 60; // Default 60 mins
 
+    @Column(length = 50)
+    private String examRoom;
+
+    @Column(name = "start_time")
+    private java.time.LocalTime startTime;
+
     @Column(columnDefinition = "TEXT")
     private String syllabusCoverage;
 
@@ -103,6 +109,22 @@ public class IAnnouncement {
 
     public void setDurationMinutes(Integer durationMinutes) {
         this.durationMinutes = durationMinutes;
+    }
+
+    public String getExamRoom() {
+        return examRoom;
+    }
+
+    public void setExamRoom(String examRoom) {
+        this.examRoom = examRoom;
+    }
+
+    public java.time.LocalTime getStartTime() {
+        return startTime;
+    }
+
+    public void setStartTime(java.time.LocalTime startTime) {
+        this.startTime = startTime;
     }
 
     public String getSyllabusCoverage() {

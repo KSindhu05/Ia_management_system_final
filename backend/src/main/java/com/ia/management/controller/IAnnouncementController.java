@@ -49,6 +49,13 @@ public class IAnnouncementController {
                 .ok(announcementService.createAnnouncement(subjectId, authentication.getName(), announcement));
     }
 
+    @GetMapping("/faculty/announcements/details")
+    public ResponseEntity<IAnnouncement> getAnnouncementDetails(
+            @RequestParam Long subjectId,
+            @RequestParam Integer cieNumber) {
+        return ResponseEntity.ok(announcementService.getAnnouncementDetails(subjectId, cieNumber));
+    }
+
     @GetMapping("/faculty/announcements")
     public ResponseEntity<List<IAnnouncement>> getMyAnnouncements(Authentication authentication) {
         return ResponseEntity.ok(announcementService.getFacultyAnnouncements(authentication.getName()));
@@ -98,8 +105,20 @@ public class IAnnouncementController {
     @GetMapping("/hod/announcements")
     public ResponseEntity<List<IAnnouncement>> getDepartmentAnnouncements(Authentication authentication) {
         User user = userRepository.findByUsername(authentication.getName()).orElseThrow();
-        // HOD associatedId stores Department Name
-        String department = user.getAssociatedId();
+        // HOD associatedId stores Department Name or Department field
+        String department = user.getDepartment();
+        if (department == null)
+            department = user.getAssociatedId(); // Fallback
+
         return ResponseEntity.ok(announcementService.getDepartmentAnnouncements(department));
+    }
+
+    @PostMapping("/hod/announcements")
+    public ResponseEntity<IAnnouncement> createHODAnnouncement(
+            @RequestParam Long subjectId,
+            @RequestBody IAnnouncement announcement,
+            Authentication authentication) {
+        return ResponseEntity
+                .ok(announcementService.createAnnouncement(subjectId, authentication.getName(), announcement));
     }
 }

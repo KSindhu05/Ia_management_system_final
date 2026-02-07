@@ -16,16 +16,6 @@ const Sidebar = ({ menuItems }) => {
                 <img src={collegeLogo} alt="SGP Logo" className={styles.sidebarLogo} />
             </div>
 
-            <div className={styles.userInfo}>
-                <div className={styles.avatar}>
-                    {user?.name?.charAt(0)}
-                </div>
-                <div className={styles.userDetails}>
-                    <p className={styles.userName}>{user?.name}</p>
-                    <p className={styles.userRole}>{user?.role?.toUpperCase()}</p>
-                </div>
-            </div>
-
             <nav className={styles.nav}>
                 {menuItems.map((item, index) => {
                     // Check if we need to render a category header

@@ -37,6 +37,34 @@ public class IAnnouncementService {
         Subject subject = subjectRepository.findById(subjectId)
                 .orElseThrow(() -> new RuntimeException("Subject not found"));
 
+        // Check if announcement already exists for this Subject + CIE
+        IAnnouncement existing = iaRepository.findBySubjectIdAndCieNumber(subjectId, announcement.getCieNumber())
+                .orElse(null);
+
+        if (existing != null) {
+            // Update fields
+            if (announcement.getScheduledDate() != null)
+                existing.setScheduledDate(announcement.getScheduledDate());
+            if (announcement.getDurationMinutes() != null)
+                existing.setDurationMinutes(announcement.getDurationMinutes());
+            if (announcement.getSyllabusCoverage() != null && !announcement.getSyllabusCoverage().isEmpty())
+                existing.setSyllabusCoverage(announcement.getSyllabusCoverage());
+            if (announcement.getInstructions() != null)
+                existing.setInstructions(announcement.getInstructions());
+            if (announcement.getExamRoom() != null)
+                existing.setExamRoom(announcement.getExamRoom());
+            if (announcement.getStartTime() != null)
+                existing.setStartTime(announcement.getStartTime());
+
+            // Ensure faculty link is maintained or updated?
+            // Usually HOD sets schedule, Faculty sets syllabus.
+            // If existing has faculty (HOD?), we might want to keep it or update to current
+            // faculty?
+            // Let's keep the original creator or current behavior.
+            // But we must update the updatedAt timestamp.
+            return iaRepository.save(existing);
+        }
+
         announcement.setFaculty(faculty);
         announcement.setSubject(subject);
 
@@ -47,6 +75,11 @@ public class IAnnouncementService {
         notificationService.notifyHOD(saved);
 
         return saved;
+    }
+
+    public IAnnouncement getAnnouncementDetails(Long subjectId, Integer cieNumber) {
+        return iaRepository.findBySubjectIdAndCieNumber(subjectId, cieNumber)
+                .orElse(null);
     }
 
     public List<IAnnouncement> getFacultyAnnouncements(String username) {
@@ -75,7 +108,7 @@ public class IAnnouncementService {
     }
 
     public List<IAnnouncement> getAnnouncementsForSubjects(List<Long> subjectIds) {
-        return iaRepository.findBySubjectIdInAndScheduledDateAfterOrderByScheduledDateAsc(subjectIds,
+        return iaRepository.findBySubject_IdInAndScheduledDateAfterOrderByScheduledDateAsc(subjectIds,
                 LocalDate.now().minusDays(1));
     }
 

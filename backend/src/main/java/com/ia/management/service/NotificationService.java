@@ -53,21 +53,52 @@ public class NotificationService {
 
     public void notifyHOD(IAnnouncement announcement) {
         Subject subject = announcement.getSubject();
-        String department = subject.getDepartment();
+        notifyHODGeneric(subject.getDepartment(),
+                "New IA Scheduled: " + subject.getName(),
+                "Faculty " + announcement.getFaculty().getUsername() + " scheduled CIE-"
+                        + announcement.getCieNumber() + " on " + announcement.getScheduledDate(),
+                Notification.NotificationType.IA_ANNOUNCEMENT,
+                announcement.getId());
+    }
 
-        // Find HOD for this department
-        // Assuming associatedId stores the department name for HOD users
-        List<User> users = userRepository.findAll(); // Optimization: Create findByRoleAndAssociatedId in Repo
+    public void notifyHODMarksSubmitted(Subject subject, String iaType, String facultyName) {
+        notifyHODGeneric(subject.getDepartment(),
+                "Marks Submitted: " + subject.getName(),
+                "Faculty " + facultyName + " has submitted " + iaType + " marks for approval.",
+                Notification.NotificationType.MARKS_SUBMITTED,
+                subject.getId());
+    }
 
+    public void notifyFacultyMarksApproved(Subject subject, String iaType, String facultyUsername) {
+        User faculty = userRepository.findByUsername(facultyUsername).orElse(null);
+        if (faculty != null) {
+            createNotification(faculty,
+                    "Marks Approved: " + subject.getName(),
+                    "Your " + iaType + " marks have been approved by HOD.",
+                    Notification.NotificationType.MARKS_APPROVED,
+                    subject.getId());
+        }
+    }
+
+    public void notifyFacultyMarksRejected(Subject subject, String iaType, String facultyUsername) {
+        User faculty = userRepository.findByUsername(facultyUsername).orElse(null);
+        if (faculty != null) {
+            createNotification(faculty,
+                    "Marks Rejected: " + subject.getName(),
+                    "Your " + iaType + " marks were rejected. Please review and resubmit.",
+                    Notification.NotificationType.MARKS_REJECTED,
+                    subject.getId());
+        }
+    }
+
+    private void notifyHODGeneric(String department, String title, String message, Notification.NotificationType type,
+            Long refId) {
+        List<User> users = userRepository.findAll();
         for (User user : users) {
-            if (user.getRole() == User.Role.HOD && department.equalsIgnoreCase(user.getAssociatedId())) {
-                createNotification(
-                        user,
-                        "New IA Scheduled: " + subject.getName(),
-                        "Faculty " + announcement.getFaculty().getUsername() + " scheduled CIE-"
-                                + announcement.getCieNumber() + " on " + announcement.getScheduledDate(),
-                        Notification.NotificationType.IA_ANNOUNCEMENT,
-                        announcement.getId());
+            String userDept = user.getAssociatedId(); // Should match Department Name
+            if (user.getRole() == User.Role.HOD && (department.equalsIgnoreCase(userDept) || "CS".equals(userDept))) { // Default
+                                                                                                                       // fallback
+                createNotification(user, title, message, type, refId);
             }
         }
     }

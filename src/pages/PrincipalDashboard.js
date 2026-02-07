@@ -61,19 +61,14 @@ const PrincipalDashboard = () => {
     }, [showToast]);
 
     const menuItems = useMemo(() => [
-        // INSTITUTE OVERVIEW
         {
-            category: 'Institute Overview',
             label: 'Dashboard Overview',
             path: '/dashboard/principal',
             icon: <LayoutDashboard size={20} />,
             isActive: activeTab === 'overview',
             onClick: () => setActiveTab('overview')
         },
-
-        // ACADEMIC ADMINISTRATION
         {
-            category: 'Academic Administration',
             label: 'Staff Management',
             path: '/dashboard/principal/faculty',
             icon: <Briefcase size={20} />,
@@ -101,51 +96,13 @@ const PrincipalDashboard = () => {
             isActive: activeTab === 'compliance',
             onClick: () => setActiveTab('compliance')
         },
-
-        // EXAMS & RESULTS
         {
-            category: 'Exams & Results',
-            label: 'Exam Section',
-            path: '/dashboard/principal/exams',
-            icon: <ScrollText size={20} />,
-            isActive: activeTab === 'exams',
-            onClick: () => setActiveTab('exams')
-        },
-
-        // COMMUNICATIONS
-        {
-            category: 'Communications',
             label: 'Circulars & Notices',
             path: '/dashboard/principal/circulars',
             icon: <Bell size={20} />,
             isActive: activeTab === 'circulars',
             onClick: () => setActiveTab('circulars'),
             badge: 2
-        },
-        {
-            label: 'Grievance Redressal',
-            path: '/dashboard/principal/grievances',
-            icon: <AlertTriangle size={20} />,
-            isActive: activeTab === 'grievances',
-            onClick: () => setActiveTab('grievances'),
-            badge: 5
-        },
-
-        // INSTITUTE REPORTS
-        {
-            category: 'Institute Reports',
-            label: 'Reports Center',
-            path: '/dashboard/principal/reports',
-            icon: <FileText size={20} />,
-            isActive: activeTab === 'reports',
-            onClick: () => setActiveTab('reports')
-        },
-        {
-            label: 'Placement Cell',
-            path: '/dashboard/principal/placements',
-            icon: <Award size={20} />,
-            isActive: activeTab === 'placements',
-            onClick: () => setActiveTab('placements')
         },
     ], [activeTab]);
 

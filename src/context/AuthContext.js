@@ -15,46 +15,75 @@ export const AuthProvider = ({ children }) => {
         setLoading(false);
     }, []);
 
-    const login = (userId, password) => {
-        // Mock Authentication Logic
-        // In a real app, this would be an API call
+    const login = async (username, password) => {
+        // MOCK MODE - Set to true to work without backend
+        const USE_MOCK = true;
 
-        // Simple logic based on ID prefix
-        const id = userId.toUpperCase();
-        let role = '';
-        let name = '';
+        if (USE_MOCK) {
+            // Mock login for frontend development
+            const mockUsers = {
+                'principal': { role: 'principal', name: 'Principal Admin' },
+                'hod_cs': { role: 'hod', name: 'HOD - CS Department' },
+                'faculty_cs': { role: 'faculty', name: 'Faculty - CS' },
+                'faculty_maths': { role: 'faculty', name: 'Faculty - Maths' },
+                '459CS23001': { role: 'student', name: 'A KAVITHA' },
+                '459CS23002': { role: 'student', name: 'ABHISHEKA' },
+                '459CS23003': { role: 'student', name: 'ADARSH REDDY G' },
+                '459CS23004': { role: 'student', name: 'AGASARA KEERTHANA' },
+                '459CS23005': { role: 'student', name: 'AKHIL S' }
+            };
 
-        // Expanded logic for new Blueprint ID formats
-        // Student: DIP/2024/CS/001 or S...
-        // Faculty: FAC/CS/001 or F...
-        // HOD: HOD/CS/001
-        // Principal: PRIN/001 or P...
-
-        if (id.startsWith('S') || id.startsWith('DIP')) {
-            role = 'student';
-            name = 'Student User';
-        } else if (id.startsWith('F') || id.startsWith('FAC')) {
-            role = 'faculty';
-            name = 'Faculty Member';
-        } else if (id.startsWith('H') || id.startsWith('HOD')) {
-            role = 'hod';
-            name = 'Head of Department';
-        } else if (id.startsWith('P') || id === 'ADMIN' || id.startsWith('PRIN')) {
-            role = 'principal';
-            name = 'Principal';
-        } else {
-            return { success: false, message: 'Invalid User ID' };
+            const mockUser = mockUsers[username];
+            if (mockUser) {
+                const userData = {
+                    id: username,
+                    role: mockUser.role,
+                    name: mockUser.name,
+                    token: 'mock-token-' + username
+                };
+                setUser(userData);
+                localStorage.setItem('user', JSON.stringify(userData));
+                return { success: true, role: userData.role };
+            } else {
+                return { success: false, message: 'Invalid credentials (Mock Mode)' };
+            }
         }
 
-        // Basic password check (accept any password for now or specific one)
-        if (password.length < 3) {
-            return { success: false, message: 'Password must be at least 3 characters' };
-        }
+        // REAL API MODE
+        try {
+            console.log("Sending login request to backend...");
+            const response = await fetch('http://127.0.0.1:8083/api/auth/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ username, password }),
+            });
 
-        const userData = { id, role, name };
-        setUser(userData);
-        localStorage.setItem('user', JSON.stringify(userData));
-        return { success: true };
+            console.log("Response status:", response.status);
+
+            const data = await response.json();
+            console.log("Response data:", data);
+
+            if (response.ok) {
+                // Backend returns: { token, id, username, role }
+                const userData = {
+                    id: data.username, // Using username as the ID for frontend logic
+                    role: data.role.toLowerCase(), // Frontend expects lowercase roles
+                    name: data.username,
+                    token: data.token
+                };
+
+                setUser(userData);
+                localStorage.setItem('user', JSON.stringify(userData));
+                return { success: true, role: userData.role };
+            } else {
+                return { success: false, message: 'Invalid credentials' };
+            }
+        } catch (error) {
+            console.error("Login error:", error);
+            return { success: false, message: 'Network error: ' + error.message };
+        }
     };
 
     const logout = () => {

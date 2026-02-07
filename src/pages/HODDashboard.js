@@ -2,14 +2,14 @@ import React, { useState, useEffect } from 'react';
 import DashboardLayout from '../components/DashboardLayout';
 import {
     LayoutDashboard, Users, FileText, CheckCircle, TrendingUp, BarChart2,
-    AlertTriangle, Briefcase, Bell, PieChart, Activity, UserX, Clock, Search,
-    Edit, Lock, Save, ChevronDown, LogOut, ShieldAlert, X
+    AlertTriangle, Briefcase, Bell, Activity, Clock, Award,
+    Edit, Save, LogOut, ShieldAlert, X, BookOpen, Layers, Megaphone, Calendar, MapPin, PenTool, Download
 } from 'lucide-react';
 import {
-    hodData, departmentStats, hodBranchComparison, departmentAlerts, resourceRequests,
     hodTrendData, hodGradeDistribution, atRiskStudents, facultyWorkload,
     departments, subjectsByDept, getStudentsByDept, branchPerformanceData, iaSubmissionStatus,
-    englishMarks, mathsMarks
+    englishMarks, mathsMarks, departmentAlerts, resourceRequests,
+    hodData, departmentStats, hodBranchComparison, facultySubjects, facultyProfiles
 } from '../utils/mockData';
 import styles from './HODDashboard.module.css';
 import {
@@ -37,12 +37,110 @@ const HODDashboard = () => {
     // API State
     const [subjects, setSubjects] = useState([]);
     const [students, setStudents] = useState([]);
-    const [subjectMarks, setSubjectMarks] = useState({}); // Map: { studentId: { ia1c1: val, ia1c2: val ... } }
-    const API_BASE = 'http://localhost:8080/api/marks';
+    const [subjectMarks, setSubjectMarks] = useState({});
+    const [analytics, setAnalytics] = useState(null);
 
-    // Unified Initialization: Runs on mount and when Dept changes
+    // Announcement State
+    const [departmentAnnouncements, setDepartmentAnnouncements] = useState([]);
+    const [facultyList, setFacultyList] = useState([]);
+    const [showAddFacultyModal, setShowAddFacultyModal] = useState(false);
+
+    // CIE Schedule Form State
+    const [scheduleForm, setScheduleForm] = useState({
+        cieNumber: 1,
+    });
+
+    // Pending Approvals State
+    const [pendingApprovals, setPendingApprovals] = useState([]);
+    const [approvalLoading, setApprovalLoading] = useState(false);
+
+    const menuItems = [
+        { label: 'Dashboard Overview', path: '#overview', icon: <LayoutDashboard size={20} />, active: activeTab === 'overview', onClick: () => setActiveTab('overview') },
+        { label: 'CIE Schedule', path: '#cie-schedule', icon: <Calendar size={20} />, active: activeTab === 'cie-schedule', onClick: () => setActiveTab('cie-schedule') },
+        { label: 'IA Monitoring', path: '#monitoring', icon: <Activity size={20} />, active: activeTab === 'monitoring', onClick: () => setActiveTab('monitoring') },
+        { label: 'Student Performance', path: '#performance', icon: <TrendingUp size={20} />, active: activeTab === 'performance', onClick: () => setActiveTab('performance') },
+        { label: 'Faculty Management', path: '#faculty', icon: <Users size={20} />, active: activeTab === 'faculty', onClick: () => setActiveTab('faculty') },
+        { label: 'IA Approval Panel', path: '#approvals', icon: <CheckCircle size={20} />, active: activeTab === 'approvals', onClick: () => setActiveTab('approvals') },
+        { label: 'Update Marks', path: '#marks', icon: <PenTool size={20} />, active: activeTab === 'update-marks', onClick: () => setActiveTab('update-marks') },
+    ];
+
+    const API_BASE = 'http://127.0.0.1:8083/api/marks';
+
+    const handleAddFaculty = async (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        const data = Object.fromEntries(formData.entries());
+        data.department = selectedDept;
+
+        try {
+            const token = localStorage.getItem('token');
+            const headers = { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) };
+            const baseUrl = API_BASE.replace('/marks', '/hod');
+
+            const response = await fetch(`${baseUrl}/faculty`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(data)
+            });
+
+            if (response.ok) {
+                alert('Faculty added successfully!');
+                setShowAddFacultyModal(false);
+                window.location.reload();
+            } else {
+                const err = await response.text();
+                alert('Failed to add faculty: ' + err);
+            }
+        } catch (error) {
+            console.error(error);
+            alert('Error adding faculty');
+        }
+    };
+
     useEffect(() => {
-        // Mock Login: User is "CS" HOD - MD Jaffar
+        if (activeTab === 'faculty' && isMyDept) {
+            const fetchFaculty = async () => {
+                try {
+                    const token = localStorage.getItem('token');
+                    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+                    const baseUrl = API_BASE.replace('/marks', '/hod');
+                    const response = await fetch(`${baseUrl}/faculty?department=${selectedDept}`, { headers });
+                    if (response.ok) {
+                        const data = await response.json();
+                        setFacultyList(data);
+                    }
+                } catch (e) {
+                    console.error("Failed to fetch faculty list", e);
+                }
+            };
+            fetchFaculty();
+        }
+    }, [activeTab, isMyDept, selectedDept]);
+
+    // Fetch pending approvals when tab is active
+    useEffect(() => {
+        if (activeTab === 'approvals' && isMyDept) {
+            const fetchPendingApprovals = async () => {
+                setApprovalLoading(true);
+                try {
+                    const token = localStorage.getItem('token');
+                    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+                    const response = await fetch(`${API_BASE}/pending?department=${selectedDept}`, { headers });
+                    if (response.ok) {
+                        const data = await response.json();
+                        setPendingApprovals(data);
+                    }
+                } catch (e) {
+                    console.error("Failed to fetch pending approvals", e);
+                } finally {
+                    setApprovalLoading(false);
+                }
+            };
+            fetchPendingApprovals();
+        }
+    }, [activeTab, isMyDept, selectedDept]);
+
+    useEffect(() => {
         const userDept = 'CS';
         const isAuthorized = selectedDept === userDept;
         setIsMyDept(isAuthorized);
@@ -53,156 +151,179 @@ const HODDashboard = () => {
             setStudents(fetchedStudents);
 
             if (subjectsByDept[selectedDept]) {
-                // Generate rich subject objects
                 const richSubjects = subjectsByDept[selectedDept].map((name, id) => {
                     let cie1Max = 35, cie2Max = 15, totalMax = 50;
+                    if (name === 'English Communication') { cie1Max = 50; cie2Max = 0; totalMax = 50; }
+                    else if (name === 'CAEG') { cie1Max = 8; cie2Max = 22; totalMax = 30; }
+                    else if (name === 'Python') { cie1Max = 25; cie2Max = 25; totalMax = 50; }
 
-                    if (name === 'English Communication') {
-                        cie1Max = 50; cie2Max = 0; totalMax = 50;
-                    } else if (name === 'CAEG') {
-                        cie1Max = 8; cie2Max = 22; totalMax = 30; // 30 Total
-                    } else if (name === 'Python') {
-                        cie1Max = 25; cie2Max = 25; totalMax = 50;
-                    }
-
-                    return {
-                        id: id + 1,
-                        name: name,
-                        department: selectedDept,
-                        cie1MaxMarks: cie1Max,
-                        cie2MaxMarks: cie2Max,
-                        totalMaxMarks: totalMax
-                    };
+                    return { id: id + 1, name: name, department: selectedDept, cie1MaxMarks: cie1Max, cie2MaxMarks: cie2Max, totalMaxMarks: totalMax };
                 });
                 setSubjects(richSubjects);
-                // Ensure we select the first subject with full details
                 setSelectedSubject(richSubjects[0]);
             }
         } else {
-            // Clear sensitive data if unauthorized
-            setDeptStudents([]);
-            setStudents([]);
-            setSubjects([]);
-            setSelectedSubject(null);
+            setDeptStudents([]); setStudents([]); setSubjects([]); setSelectedSubject(null);
         }
     }, [selectedDept]);
 
-    // Generate Marks when Subject or Students change
+    useEffect(() => {
+        if (isMyDept && selectedDept) {
+            const fetchAnalytics = async () => {
+                try {
+                    const token = localStorage.getItem('token');
+                    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+                    const res = await fetch(`http://127.0.0.1:8083/api/analytics/department/${selectedDept}/stats`, { headers });
+                    if (res.ok) { setAnalytics(await res.json()); }
+                } catch (e) { console.error("Failed to fetch analytics", e); }
+            };
+            fetchAnalytics();
+        }
+    }, [isMyDept, selectedDept]);
+
     useEffect(() => {
         if (selectedSubject && selectedSubject.id && students.length > 0) {
-            // Generate mock marks map for the selected subject
             const marksMap = {};
             students.forEach((student, index) => {
                 let cie1, cie2;
-
-                if (selectedSubject.name === 'English Communication') {
-                    // Use Hardcoded marks for English
-                    const val = englishMarks[index];
-                    cie1 = val;
-                    cie2 = 0;
-                } else if (selectedSubject.name === 'Engineering Maths-II') {
-                    // Use Hardcoded marks for Maths
-                    const val = mathsMarks[index];
-                    if (val) {
-                        cie1 = val.cie1;
-                        cie2 = val.cie2;
-                    } else {
-                        cie1 = 0; cie2 = 0;
-                    }
-                } else {
+                if (selectedSubject.name === 'English Communication') { const val = englishMarks[index]; cie1 = val; cie2 = 0; }
+                else if (selectedSubject.name === 'Engineering Maths-II') { const val = mathsMarks[index]; if (val) { cie1 = val.cie1; cie2 = val.cie2; } else { cie1 = 0; cie2 = 0; } }
+                else {
                     const max1 = selectedSubject.cie1MaxMarks || 35;
                     const max2 = selectedSubject.cie2MaxMarks || 15;
                     cie1 = max1 > 0 ? Math.floor(Math.random() * (max1 - 5)) + 5 : 0;
                     cie2 = max2 > 0 ? Math.floor(Math.random() * (max2 - 2)) + 2 : 0;
                 }
-
-                marksMap[student.id] = {
-                    'IA1': {
-                        student: { id: student.id },
-                        iaType: 'IA1',
-                        cie1Score: cie1,
-                        cie2Score: cie2
-                    }
-                };
+                marksMap[student.id] = { 'IA1': { student: { id: student.id }, iaType: 'IA1', cie1Score: cie1, cie2Score: cie2 } };
             });
             setSubjectMarks(marksMap);
         }
     }, [selectedSubject, students]);
 
-    const menuItems = [
-        { label: 'Dashboard Overview', path: '#overview', icon: <LayoutDashboard size={20} />, active: activeTab === 'overview', onClick: () => setActiveTab('overview') },
-        { label: 'IA Monitoring', path: '#monitoring', icon: <Activity size={20} />, active: activeTab === 'monitoring', onClick: () => setActiveTab('monitoring') },
-        { label: 'Student Performance', path: '#performance', icon: <TrendingUp size={20} />, active: activeTab === 'performance', onClick: () => setActiveTab('performance') },
-        { label: 'Faculty Management', path: '#faculty', icon: <Users size={20} />, active: activeTab === 'faculty', onClick: () => setActiveTab('faculty') },
-        { label: 'IA Approval Panel', path: '#approvals', icon: <CheckCircle size={20} />, active: activeTab === 'approvals', onClick: () => setActiveTab('approvals') },
-        { label: 'Update Marks', path: '#update-marks', icon: <Edit size={20} />, active: activeTab === 'update-marks', onClick: () => setActiveTab('update-marks') },
-        { label: 'Reports & Analytics', path: '#analytics', icon: <BarChart2 size={20} />, active: activeTab === 'analytics', onClick: () => setActiveTab('analytics') },
-    ];
+    useEffect(() => {
+        if (isMyDept && selectedDept === 'CS') {
+            const fetchAnnouncements = async () => {
+                try {
+                    const response = await fetch('http://127.0.0.1:8083/api/announcements/hod/announcements', { headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') } });
+                    if (response.ok) { setDepartmentAnnouncements(await response.json()); }
+                    else {
+                        setDepartmentAnnouncements([{ id: 1, cieNumber: '1', scheduledDate: '2025-03-10', subject: { name: 'Python', code: '20CS31' }, faculty: { username: 'Wahida Banu' }, status: 'SCHEDULED' }]);
+                    }
+                } catch (e) { console.error("Failed to fetch announcements", e); }
+            };
+            fetchAnnouncements();
+        }
+    }, [isMyDept, selectedDept]);
 
-    // Chart Data Configs
-    const commonOptions = {
-        responsive: true,
-        plugins: { legend: { position: 'bottom' } },
-        scales: { y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } }, x: { grid: { display: false } } },
-        maintainAspectRatio: false
+    const handleScheduleSubmit = async (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        const data = Object.fromEntries(formData.entries());
+        data.cieNumber = scheduleForm.cieNumber;
+
+        try {
+            const token = localStorage.getItem('token');
+            const headers = { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) };
+            const baseUrl = API_BASE.replace('/marks', '/hod');
+
+            const response = await fetch(`${baseUrl}/announcements?subjectId=${data.subjectId}`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(data)
+            });
+
+            if (response.ok) {
+                alert('CIE Schedule Published Successfully!');
+                setActiveTab('cie-schedule');
+                window.location.reload();
+            } else { alert('Failed to publish schedule'); }
+        } catch (error) { console.error(error); alert('Error publishing schedule'); }
     };
 
-    const doughnutOptions = {
-        responsive: true,
-        plugins: { legend: { position: 'right' } },
-        maintainAspectRatio: false
-    };
+    useEffect(() => {
+        if ((activeTab === 'cie-schedule' || activeTab === 'lesson-plans') && isMyDept) {
+            const fetchSubjects = async () => {
+                try {
+                    const token = localStorage.getItem('token');
+                    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+                    const baseUrl = 'http://127.0.0.1:8083/api/subjects';
+                    const response = await fetch(`${baseUrl}/department/${selectedDept}`, { headers });
+                    if (response.ok) { setSubjects(await response.json()); }
+                } catch (e) { console.error("Failed to fetch subjects", e); }
+            };
+            fetchSubjects();
+        }
+    }, [activeTab, isMyDept, selectedDept]);
 
-    const handleLogout = () => {
-        // Mock logout
-        window.location.href = '/';
-    };
+    const commonOptions = { responsive: true, plugins: { legend: { position: 'bottom' } }, scales: { y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } }, x: { grid: { display: false } } }, maintainAspectRatio: false };
+    const doughnutOptions = { responsive: true, plugins: { legend: { position: 'right' } }, maintainAspectRatio: false };
+
+    const handleLogout = () => { window.location.href = '/'; };
 
     const handleMarkChange = (studentId, field, value) => {
-        // field is 'cie1' or 'cie2'
         let numValue = parseInt(value, 10);
-        if (value === '') numValue = 0;
-        else if (isNaN(numValue)) return;
-
-        // Dynamic Clamping based on subject config
-        let max = 0;
-        if (field === 'cie1') max = selectedSubject?.cie1MaxMarks || 0;
-        else if (field === 'cie2') max = selectedSubject?.cie2MaxMarks || 0;
-
-        if (numValue < 0) numValue = 0;
-        if (numValue > max) numValue = max;
-
-        setEditingMarks(prev => ({
-            ...prev,
-            [studentId]: {
-                ...prev[studentId],
-                [field]: numValue
-            }
-        }));
+        if (value === '') numValue = 0; else if (isNaN(numValue)) return;
+        const max = 50; // Each CIE has max 50 marks
+        if (numValue < 0) numValue = 0; if (numValue > max) numValue = max;
+        setEditingMarks(prev => ({ ...prev, [studentId]: { ...prev[studentId], [field]: numValue } }));
     };
 
     const saveMarks = async () => {
-        // Mock Save
         alert("Success: Marks have been effectively updated in the local state (Mock Mode).");
         setEditingMarks({});
-
-        // Refresh local marks map with edits
         const newMarksMap = { ...subjectMarks };
         Object.keys(editingMarks).forEach(stdId => {
             if (!newMarksMap[stdId]) newMarksMap[stdId] = { 'IA1': { student: { id: stdId } } };
-
             if (editingMarks[stdId].cie1 !== undefined) newMarksMap[stdId]['IA1'].cie1Score = editingMarks[stdId].cie1;
             if (editingMarks[stdId].cie2 !== undefined) newMarksMap[stdId]['IA1'].cie2Score = editingMarks[stdId].cie2;
         });
         setSubjectMarks(newMarksMap);
     };
 
-    if (!isMyDept && activeTab !== 'overview' && activeTab !== 'analytics') {
-        // Logic to prevent accessing tabs if not my dept could go here, but requirements say visual block
-    }
+    const handleApproveMarks = async (subjectId, iaType) => {
+        if (!window.confirm(`Are you sure you want to APPROVE marks for ${iaType}? This will lock these marks.`)) return;
+        try {
+            const token = localStorage.getItem('token');
+            const headers = { 'Authorization': `Bearer ${token}` };
+            const response = await fetch(`${API_BASE}/approve?subjectId=${subjectId}&iaType=${iaType}`, {
+                method: 'POST',
+                headers
+            });
+            if (response.ok) {
+                alert('Marks approved successfully!');
+                setPendingApprovals(prev => prev.filter(p => !(p.subjectId === subjectId && p.iaType === iaType)));
+            } else {
+                const err = await response.text();
+                alert('Failed to approve: ' + err);
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Error approving marks');
+        }
+    };
 
+    const handleRejectMarks = async (subjectId, iaType) => {
+        if (!window.confirm(`Are you sure you want to REJECT marks for ${iaType}? Faculty will need to resubmit.`)) return;
+        try {
+            const token = localStorage.getItem('token');
+            const headers = { 'Authorization': `Bearer ${token}` };
+            const response = await fetch(`${API_BASE}/reject?subjectId=${subjectId}&iaType=${iaType}`, {
+                method: 'POST',
+                headers
+            });
+            if (response.ok) {
+                alert('Marks rejected. Faculty has been notified.');
+                setPendingApprovals(prev => prev.filter(p => !(p.subjectId === subjectId && p.iaType === iaType)));
+            } else {
+                const err = await response.text();
+                alert('Failed to reject: ' + err);
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Error rejecting marks');
+        }
+    };
 
-    /* ACCESS DENIED VIEW */
     const AccessDeniedView = () => (
         <div className={styles.accessDeniedContainer}>
             <div className={styles.deniedContent}>
@@ -213,247 +334,41 @@ const HODDashboard = () => {
                     <AlertTriangle size={16} />
                     <span>This action has been logged. Please switch back to your assigned department (Computer Science).</span>
                 </div>
-                <button
-                    className={styles.backBtn}
-                    onClick={() => setSelectedDept('CS')}
-                >
-                    Return to My Department
-                </button>
+                <button className={styles.backBtn} onClick={() => setSelectedDept('CS')}>Return to My Department</button>
             </div>
         </div>
     );
 
     return (
         <div className={styles.dashboardContainer}>
-            {/* Sidebar */}
             <aside className={styles.sidebar}>
-                <div className={styles.sidebarHeader}>
-                    <img src={logo} alt="SGP Logo" style={{ maxWidth: '100%', height: 'auto', maxHeight: '60px' }} />
-                </div>
-
-                <div className={styles.userInfo}>
-                    <div className={styles.avatar}>
-                        MJ
-                    </div>
-                    <div className={styles.userDetails}>
-                        <h4 className={styles.userName}>MD Jaffar</h4>
-                        <span className={styles.userRole}>HOD | Computer Science</span>
-                    </div>
-                </div>
-
-                <nav className={styles.navMenu}>
-                    {menuItems.map((item, index) => (
-                        <button
-                            key={index}
-                            className={`${styles.navItem} ${item.active ? styles.activeNav : ''}`}
-                            onClick={item.onClick}
-                        // Disable actionable tabs if access denied, or let the main content block handle it
-                        // Requirements imply main content block
-                        >
-                            {item.icon}
-                            <span>{item.label}</span>
-                        </button>
-                    ))}
-                </nav>
-
-                <button className={styles.logoutButton} onClick={handleLogout}>
-                    <LogOut size={20} />
-                    <span>Logout</span>
-                </button>
+                <div className={styles.sidebarHeader}><img src={logo} alt="SGP Logo" style={{ maxWidth: '100%', height: 'auto', maxHeight: '60px' }} /></div>
+                <nav className={styles.navMenu}>{menuItems.map((item, index) => (<button key={index} className={`${styles.navItem} ${item.active ? styles.activeNav : ''}`} onClick={item.onClick}>{item.icon}<span>{item.label}</span></button>))}</nav>
+                <button className={styles.logoutButton} onClick={handleLogout}><LogOut size={20} /><span>Logout</span></button>
             </aside>
-
-            {/* Main Content */}
             <main className={styles.mainContent}>
-
-                {/* Header with Profile at Right (30%) */}
                 <header className={styles.topHeader}>
-                    <div className={styles.headerLeft}>
-                        {activeTab === 'overview' ? (
-                            <div>
-                                <h1 className={styles.welcomeText}>Hello, MD Jaffar</h1>
-                                <p className={styles.subtitle}>Head of Computer Science | HOD - ID: CS-H01</p>
-                            </div>
-                        ) : (
-                            <h1>{menuItems.find(m => m.active)?.label}</h1>
-                        )}
-                    </div>
-
-                    <div className={styles.headerRight}>
-                        <div className={styles.deptSelector}>
-                            <span>Department:</span>
-                            <select
-                                value={selectedDept}
-                                onChange={(e) => setSelectedDept(e.target.value)}
-                                className={styles.deptSelect}
-                            >
-                                {departments.map(d => (
-                                    <option key={d.id} value={d.id}>{d.name}</option>
-                                ))}
-                            </select>
-                        </div>
-                    </div>
+                    <div className={styles.headerLeft}>{activeTab === 'overview' ? (<div><h1 className={styles.welcomeText}>Hello, MD Jaffar</h1><p className={styles.subtitle}>Head of Computer Science | HOD - ID: CS-H01</p></div>) : (<h1>{menuItems.find(m => m.active)?.label}</h1>)}</div>
+                    <div className={styles.headerRight}><div className={styles.deptSelector}><span>Department:</span><select value={selectedDept} onChange={(e) => setSelectedDept(e.target.value)} className={styles.deptSelect}>{departments.map(d => (<option key={d.id} value={d.id}>{d.name}</option>))}</select></div></div>
                 </header>
-
                 <div className={styles.scrollableContent}>
-
-                    {/* RESTRICTED ACCESS CHECK */}
-                    {!isMyDept ? (
-                        <AccessDeniedView />
-                    ) : (
+                    {!isMyDept ? (<AccessDeniedView />) : (
                         <>
-                            {/* OVERVIEW TAB */}
-                            {activeTab === 'overview' && (
-                                <div className={styles.overviewContainer}>
-
-                                    {/* Stats Cards */}
-                                    <div className={styles.statsRow}>
-                                        <div className={styles.statCard}>
-                                            <div className={`${styles.iconBox} ${styles.blue}`}>
-                                                <Users size={24} />
-                                            </div>
-                                            <div className={styles.statInfo}>
-                                                <p>Total Students</p>
-                                                <h3>220</h3>
-                                            </div>
-                                        </div>
-                                        <div className={styles.statCard}>
-                                            <div className={`${styles.iconBox} ${styles.green}`}>
-                                                <Briefcase size={24} />
-                                            </div>
-                                            <div className={styles.statInfo}>
-                                                <p>Faculty Members</p>
-                                                <h3>15</h3>
-                                            </div>
-                                        </div>
-                                        <div className={styles.statCard}>
-                                            <div className={`${styles.iconBox} ${styles.purple}`}>
-                                                <FileText size={24} />
-                                            </div>
-                                            <div className={styles.statInfo}>
-                                                <p>Subjects</p>
-                                                <h3>5</h3>
-                                            </div>
-                                        </div>
-                                        <div className={styles.statCard}>
-                                            <div className={`${styles.iconBox} ${styles.orange}`}>
-                                                <Activity size={24} />
-                                            </div>
-                                            <div className={styles.statInfo}>
-                                                <p>IA Completion</p>
-                                                <h3>85%</h3>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Quick Actions Row */}
-                                    <div className={styles.card} style={{ marginBottom: '1.5rem', padding: '1rem' }}>
-                                        <div className={styles.quickActions}>
-                                            <button className={styles.quickBtn} onClick={() => alert('Broadcasting message to all faculty...')}>
-                                                <Bell size={20} className={styles.textBlue} />
-                                                <span>Broadcast Message</span>
-                                            </button>
-                                            <button className={styles.quickBtn} onClick={() => alert('Scheduling dept meeting...')}>
-                                                <Clock size={20} className={styles.textPurple} />
-                                                <span>Schedule Meeting</span>
-                                            </button>
-                                            <button className={styles.quickBtn} onClick={() => alert('Downloading monthly report...')}>
-                                                <FileText size={20} className={styles.textGreen} />
-                                                <span>Monthly Report</span>
-                                            </button>
-                                            <button className={styles.quickBtn} onClick={() => setActiveTab('update-marks')}>
-                                                <Edit size={20} className={styles.textOrange} />
-                                                <span>Update Marks</span>
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    {/* Alert & Charts Row */}
-                                    <div className={styles.gridTwoOne}>
-                                        <div className={styles.leftColumn}>
-                                            <div className={styles.card} style={{ marginBottom: '1.5rem' }}>
-                                                <div className={styles.cardHeader}>
-                                                    <h3>Department Performance (Avg IA Score)</h3>
-                                                </div>
-                                                <div className={styles.circlesContainer}>
-                                                    {branchPerformanceData.labels.map((label, index) => {
-                                                        const value = branchPerformanceData.datasets[0].data[index];
-                                                        const data = {
-                                                            labels: ['Score', 'Remaining'],
-                                                            datasets: [{
-                                                                data: [value, 100 - value],
-                                                                backgroundColor: ['#8b5cf6', '#f3f4f6'],
-                                                                borderWidth: 0,
-                                                                cutout: '70%'
-                                                            }]
-                                                        };
-                                                        return (
-                                                            <div key={index} className={styles.circleItem}>
-                                                                <div style={{ height: '120px', width: '120px', position: 'relative' }}>
-                                                                    <Doughnut data={data} options={{ ...doughnutOptions, plugins: { legend: { display: false }, tooltip: { enabled: false } } }} />
-                                                                    <div className={styles.circleLabel}>
-                                                                        <span className={styles.circleValue}>{value}%</span>
-                                                                    </div>
-                                                                </div>
-                                                                <p className={styles.circleName}>{label}</p>
-                                                            </div>
-                                                        );
-                                                    })}
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div className={styles.rightColumn}>
-
-
-                                            <div className={styles.card}>
-                                                <div className={styles.cardHeader}>
-                                                    <h3>Recent Alerts</h3>
-                                                </div>
-                                                <div className={styles.alertList}>
-                                                    {departmentAlerts.map(alert => (
-                                                        <div key={alert.id} className={`${styles.alertItem} ${styles[alert.type]}`}>
-                                                            <AlertTriangle size={16} />
-                                                            <div>
-                                                                <p>{alert.message}</p>
-                                                                <span>{alert.date}</span>
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* UPDATE MARKS TAB (NEW) */}
+                            {activeTab === 'announcements' && (<div className={styles.announcementContainer}><div className={styles.card}><div className={styles.cardHeader}><h3>Department IA Schedule</h3><div style={{ display: 'flex', gap: '10px' }}><button className={styles.secondaryBtn}><Calendar size={16} /> Sync to Calendar</button><button className={styles.quickBtn} style={{ background: '#fef3c7', color: '#d97706' }}><ShieldAlert size={16} /> Check Conflicts</button></div></div><div className={styles.tableWrapper}><table className={styles.table}><thead><tr><th>Subject</th><th>CIE Round</th><th>Faculty</th><th>Scheduled Date</th><th>Status</th><th>Actions</th></tr></thead><tbody>{departmentAnnouncements.length > 0 ? departmentAnnouncements.map((ann, idx) => (<tr key={idx}><td style={{ fontWeight: 600 }}>{ann.subject?.name}</td><td><span className={styles.tag}>CIE-{ann.cieNumber}</span></td><td>{ann.faculty?.username}</td><td>{ann.scheduledDate}</td><td><span className={`${styles.statusBadge} ${styles.approved}`}>{ann.status || 'SCHEDULED'}</span></td><td><button className={styles.secondaryBtn} onClick={() => alert('Viewing details...')}>View</button></td></tr>)) : (<tr><td colSpan="6" style={{ textAlign: 'center', padding: '2rem' }}>No announcements found.</td></tr>)}</tbody></table></div></div></div>)}
+                            {activeTab === 'overview' && (<div className={styles.overviewContainer}><div className={styles.statsRow}><div className={styles.statCard}><div className={`${styles.iconBox} ${styles.blue}`}><Users size={24} /></div><div className={styles.statInfo}><p>Total Students</p><h3>{deptStudents.length || 0}</h3></div></div><div className={styles.statCard}><div className={`${styles.iconBox} ${styles.green}`}><Briefcase size={24} /></div><div className={styles.statInfo}><p>Faculty Members</p><h3>{facultyList.length || 0}</h3></div></div><div className={styles.statCard}><div className={`${styles.iconBox} ${styles.purple}`}><FileText size={24} /></div><div className={styles.statInfo}><p>Dept. Average</p><h3>{analytics ? analytics.average : '-'}</h3></div></div><div className={styles.statCard}><div className={`${styles.iconBox} ${styles.orange}`}><Activity size={24} /></div><div className={styles.statInfo}><p>Pass Percentage</p><h3>{analytics ? analytics.passPercentage : '-'}%</h3></div></div></div><div className={styles.card} style={{ marginBottom: '1.5rem', padding: '1rem' }}><div className={styles.quickActions}><button className={styles.quickBtn} onClick={() => alert('Broadcasting message to all faculty...')}><Bell size={20} className={styles.textBlue} /><span>Broadcast Message</span></button><button className={styles.quickBtn} onClick={() => alert('Scheduling dept meeting...')}><Clock size={20} className={styles.textPurple} /><span>Schedule Meeting</span></button><button className={styles.quickBtn} onClick={() => alert('Downloading monthly report...')}><FileText size={20} className={styles.textGreen} /><span>Monthly Report</span></button><button className={styles.quickBtn} onClick={() => setActiveTab('update-marks')}><Edit size={20} className={styles.textOrange} /><span>Update Marks</span></button></div></div><div className={styles.gridTwoOne}><div className={styles.leftColumn}><div className={styles.card} style={{ marginBottom: '1.5rem' }}><div className={styles.cardHeader}><h3>Department Performance (Avg IA Score)</h3></div><div className={styles.circlesContainer}><div className={styles.circlesContainer}>{analytics ? [{ label: 'Avg Percentage', value: Math.round(((analytics.average || 0) / 50) * 100) }, { label: 'Pass Rate', value: analytics.passPercentage || 0 }, { label: 'Risk Factor', value: deptStudents.length > 0 ? Math.round(((analytics.atRiskCount || 0) / deptStudents.length) * 100) : 0 }].map((metric, index) => { const data = { labels: ['Metric', 'Remaining'], datasets: [{ data: [metric.value, 100 - metric.value], backgroundColor: ['#8b5cf6', '#f3f4f6'], borderWidth: 0, cutout: '70%' }] }; return (<div key={index} className={styles.circleItem}><div style={{ height: '120px', width: '120px', position: 'relative' }}><Doughnut data={data} options={{ ...doughnutOptions, plugins: { legend: { display: false }, tooltip: { enabled: false } } }} /><div className={styles.circleLabel}><span className={styles.circleValue}>{metric.value}%</span></div></div><p className={styles.circleName}>{metric.label}</p></div>); }) : <p style={{ padding: '2rem', textAlign: 'center', color: '#6b7280' }}>Loading Analytics...</p>}</div></div></div></div><div className={styles.rightColumn}><div className={styles.card}><div className={styles.cardHeader}><h3>Recent Alerts</h3></div><div className={styles.alertList}>{departmentAlerts.map(alert => (<div key={alert.id} className={`${styles.alertItem} ${styles[alert.type]}`}><AlertTriangle size={16} /><div><p>{alert.message}</p><span>{alert.date}</span></div></div>))}</div></div></div></div></div>)}
                             {activeTab === 'update-marks' && (
                                 <div className={styles.updateMarksContainer}>
                                     <div className={styles.card}>
                                         <div className={styles.cardHeader}>
                                             <h3>Modify Student Marks</h3>
                                             <div className={styles.filterGroup}>
-                                                <select
-                                                    className={styles.deptSelect}
-                                                    value={selectedSubject?.id || ''}
-                                                    onChange={(e) => {
-                                                        const sub = subjects.find(s => s.id === parseInt(e.target.value));
-                                                        setSelectedSubject(sub);
-                                                    }}
-                                                >
-                                                    {subjects.map(sub => (
-                                                        <option key={sub.id} value={sub.id}>{sub.name}</option>
-                                                    ))}
+                                                <select className={styles.deptSelect} value={selectedSubject?.id || ''} onChange={(e) => { const sub = subjects.find(s => s.id === parseInt(e.target.value)); setSelectedSubject(sub); }}>
+                                                    {subjects.filter(sub => sub.name !== 'IC').map(sub => (<option key={sub.id} value={sub.id}>{sub.name}</option>))}
                                                 </select>
-                                                <button className={styles.saveBtn} onClick={saveMarks}>
-                                                    <Save size={16} /> Save Changes
-                                                </button>
+                                                <button className={styles.saveBtn} onClick={saveMarks}><Save size={16} /> Save Changes</button>
                                             </div>
                                         </div>
-                                        <p className={styles.helperText}>
-                                            Edit marks directly in the table. Changes are tracked locally until saved.
-                                            Max Marks: CIE-1 ({selectedSubject?.cie1MaxMarks}), CIE-2 ({selectedSubject?.cie2MaxMarks || 0}) - Total ({selectedSubject?.totalMaxMarks})
-                                        </p>
+                                        <p className={styles.helperText}>Edit marks directly in the table. Changes are tracked locally until saved. Max Marks: CIE-1 to CIE-5 (50 each) - Total (250)</p>
                                         <div className={styles.tableWrapper}>
                                             <table className={styles.table}>
                                                 <thead>
@@ -462,76 +377,37 @@ const HODDashboard = () => {
                                                         <th>Reg No</th>
                                                         <th>Student Name</th>
                                                         <th>Sem/Sec</th>
-                                                        {selectedSubject?.cie1MaxMarks > 0 && <th>CIE-1 ({selectedSubject.cie1MaxMarks})</th>}
-                                                        {selectedSubject?.cie2MaxMarks > 0 && <th>CIE-2 ({selectedSubject.cie2MaxMarks})</th>}
-                                                        <th>Total ({selectedSubject?.totalMaxMarks})</th>
+                                                        <th>CIE-1 (50)</th>
+                                                        <th>CIE-2 (50)</th>
+                                                        <th>CIE-3 (50)</th>
+                                                        <th>CIE-4 (50)</th>
+                                                        <th>CIE-5 (50)</th>
+                                                        <th>Total (250)</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
                                                     {students.map((student, index) => {
-                                                        const sMarks = subjectMarks[student.id] || {}; // This is a map of IA types? 
-                                                        // Wait, the API returns list of IAMarks. My map logic was: marksMap[studentId][iaType].
-                                                        // But here the UI seems to be for a specific IA type? 
-                                                        // Actually the previous UI had columns for IA1, IA2, IA3.
-                                                        // The "Real Sheet" implies a grid for *one* IA (e.g. IA-1).
-                                                        // But the previous dashboard had columns for IA1, IA2, IA3.
-                                                        // Mixing these is tricky. The sheet shows "IA-1" at the top.
-                                                        // User said "if here i change...".
-                                                        // Let's assume we are editing **IA-1** for now, or add a selector for IA Type?
-                                                        // The previous UI had IA1, IA2, IA3 columns. 
-                                                        // If we switch to CO1/CO2, we can't show ALL IAs at once easily (too many columns).
-                                                        // I will add an "IA Selector" (IA1, IA2, IA3) and show CO1/CO2 for THAT IA.
-
-                                                        // For now, let's hardcode IA1 or add a selector.
-                                                        // I'll add a selector for IA Type above the table.
-
-                                                        const currentIA = 'IA1'; // TODO: Make dynamic state
-                                                        // Retrieve existing marks or edited marks
-                                                        // editingMarks structure needs to change to: { studentId: { co1: val, co2: val } }
-
-                                                        const iMarks = sMarks[currentIA] || {};
                                                         const editMark = editingMarks[student.id] || {};
-
-                                                        const valCIE1 = editMark.cie1 !== undefined ? editMark.cie1 : (iMarks.cie1Score || '');
-                                                        const valCIE2 = editMark.cie2 !== undefined ? editMark.cie2 : (iMarks.cie2Score || '');
-
-                                                        // Total
-                                                        const total = (Number(valCIE1) || 0) + (Number(valCIE2) || 0);
-
+                                                        const valCIE1 = editMark.cie1 !== undefined ? editMark.cie1 : '';
+                                                        const valCIE2 = editMark.cie2 !== undefined ? editMark.cie2 : '';
+                                                        const valCIE3 = editMark.cie3 !== undefined ? editMark.cie3 : '';
+                                                        const valCIE4 = editMark.cie4 !== undefined ? editMark.cie4 : '';
+                                                        const valCIE5 = editMark.cie5 !== undefined ? editMark.cie5 : '';
+                                                        const total = (Number(valCIE1) || 0) + (Number(valCIE2) || 0) + (Number(valCIE3) || 0) + (Number(valCIE4) || 0) + (Number(valCIE5) || 0);
                                                         return (
                                                             <tr key={student.id}>
                                                                 <td>{index + 1}</td>
                                                                 <td>{student.regNo}</td>
                                                                 <td>{student.name}</td>
                                                                 <td>{student.sem} - {student.section}</td>
-
-                                                                {selectedSubject?.cie1MaxMarks > 0 && (
-                                                                    <td>
-                                                                        <input
-                                                                            type="number"
-                                                                            className={styles.markInput}
-                                                                            value={valCIE1}
-                                                                            onChange={(e) => handleMarkChange(student.id, 'cie1', e.target.value)}
-                                                                        />
-                                                                    </td>
-                                                                )}
-
-                                                                {selectedSubject?.cie2MaxMarks > 0 && (
-                                                                    <td>
-                                                                        <input
-                                                                            type="number"
-                                                                            className={styles.markInput}
-                                                                            value={valCIE2}
-                                                                            onChange={(e) => handleMarkChange(student.id, 'cie2', e.target.value)}
-                                                                        />
-                                                                    </td>
-                                                                )}
-
-                                                                <td style={{ fontWeight: 'bold' }}>
-                                                                    {Math.min(total, selectedSubject?.totalMaxMarks || 100)}
-                                                                </td>
+                                                                <td><input type="number" className={styles.markInput} value={valCIE1} max={50} onChange={(e) => handleMarkChange(student.id, 'cie1', e.target.value)} /></td>
+                                                                <td><input type="number" className={styles.markInput} value={valCIE2} max={50} onChange={(e) => handleMarkChange(student.id, 'cie2', e.target.value)} /></td>
+                                                                <td><input type="number" className={styles.markInput} value={valCIE3} max={50} onChange={(e) => handleMarkChange(student.id, 'cie3', e.target.value)} /></td>
+                                                                <td><input type="number" className={styles.markInput} value={valCIE4} max={50} onChange={(e) => handleMarkChange(student.id, 'cie4', e.target.value)} /></td>
+                                                                <td><input type="number" className={styles.markInput} value={valCIE5} max={50} onChange={(e) => handleMarkChange(student.id, 'cie5', e.target.value)} /></td>
+                                                                <td style={{ fontWeight: 'bold' }}>{Math.min(total, 250)}</td>
                                                             </tr>
-                                                        )
+                                                        );
                                                     })}
                                                 </tbody>
                                             </table>
@@ -539,44 +415,129 @@ const HODDashboard = () => {
                                     </div>
                                 </div>
                             )}
+                            {activeTab === 'monitoring' && (<div className={styles.monitoringContainer}><div className={styles.card}><div className={styles.cardHeader}><h3>Subject-wise IA Submission Status</h3><div className={styles.filterGroup}><select className={styles.deptSelect} style={{ padding: '0.4rem 0.8rem', fontSize: '0.9rem' }}><option>All Semesters</option><option>2nd Semester</option><option>4th Semester</option></select></div></div><table className={styles.table}><thead><tr><th>Subject Name</th><th>Faculty</th><th>Status</th><th>Pending Count</th><th>Action</th></tr></thead><tbody>{subjectsByDept[selectedDept]?.map((subName, idx) => { const subObj = facultySubjects.find(fs => fs.name === subName) || {}; const facultyId = subObj.instructorId; const facultyObj = facultyProfiles.find(fp => fp.id === facultyId) || { name: 'Visiting Faculty', id: 'VF' }; const statusOptions = ['Approved', 'Submitted', 'Pending']; const status = statusOptions[idx % 3]; return (<tr key={idx} style={{ transition: 'background 0.2s' }}><td style={{ fontWeight: 500 }}>{subName}</td><td><div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}><div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#eff6ff', color: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600, fontSize: '0.85rem' }}>{facultyObj.name.charAt(0)}</div><span>{facultyObj.name}</span></div></td><td><span className={`${styles.statusBadge} ${status === 'Approved' ? styles.approved : status === 'Submitted' ? styles.submitted : styles.pending}`}>{status}</span></td><td>{status === 'Pending' ? (<span style={{ color: '#ef4444', fontWeight: 500 }}>12 Students</span>) : (<span style={{ color: '#94a3b8' }}>-</span>)}</td><td><button className={styles.secondaryBtn} style={{ padding: '0.4rem 1rem', fontSize: '0.85rem' }} onClick={() => setViewingSubject({ name: subName, faculty: facultyObj.name })}>View</button></td></tr>); })}</tbody></table></div>{viewingSubject && (<div className={styles.modalOverlay} onClick={() => setViewingSubject(null)}><div className={styles.modalContent} onClick={e => e.stopPropagation()}><div className={styles.modalHeader}><h2>{viewingSubject.name}</h2><button className={styles.closeBtn} onClick={() => setViewingSubject(null)}><X size={24} /></button></div><div className={styles.modalBody}><p style={{ marginBottom: '1.5rem', color: '#6b7280' }}>Faculty: <span style={{ color: '#111827', fontWeight: 600 }}>{viewingSubject.faculty}</span></p><div className={styles.tableWrapper}><table className={styles.table}><thead><tr><th>Sl. No.</th><th>Reg No</th><th>Student Name</th><th>CIE-1</th><th>CIE-2</th><th>CIE-3</th><th>Average</th></tr></thead><tbody>{deptStudents.map((student, index) => (<tr key={student.id}><td>{index + 1}</td><td>{student.regNo}</td><td>{student.name}</td><td>{student.marks.ia1}</td><td>{student.marks.ia2}</td><td>{student.marks.ia3}</td><td style={{ fontWeight: 'bold' }}>{Math.round((Number(student.marks.ia1) + Number(student.marks.ia2) + Number(student.marks.ia3)) / 3)}</td></tr>))}</tbody></table></div></div></div></div>)}</div>)}
+                            {activeTab === 'performance' && (
+                                <div className={styles.performanceContainer}>
+                                    {/* Performance Summary Stats */}
+                                    <div className={styles.statsRow}>
+                                        <div className={styles.statCard}>
+                                            <div className={`${styles.iconBox} ${styles.blue}`}>
+                                                <Users size={24} />
+                                            </div>
+                                            <div className={styles.statInfo}>
+                                                <p>Total Students</p>
+                                                <h3>{deptStudents.length || 0}</h3>
+                                            </div>
+                                        </div>
+                                        <div className={styles.statCard}>
+                                            <div className={`${styles.iconBox} ${styles.green}`}>
+                                                <TrendingUp size={24} />
+                                            </div>
+                                            <div className={styles.statInfo}>
+                                                <p>Class Average</p>
+                                                <h3>{analytics?.average || 0}/50</h3>
+                                            </div>
+                                        </div>
+                                        <div className={styles.statCard}>
+                                            <div className={`${styles.iconBox} ${styles.purple}`}>
+                                                <Award size={24} />
+                                            </div>
+                                            <div className={styles.statInfo}>
+                                                <p>Pass Rate</p>
+                                                <h3>{analytics?.passPercentage || 0}%</h3>
+                                            </div>
+                                        </div>
+                                        <div className={styles.statCard}>
+                                            <div className={`${styles.iconBox} ${styles.orange}`}>
+                                                <AlertTriangle size={24} />
+                                            </div>
+                                            <div className={styles.statInfo}>
+                                                <p>At Risk</p>
+                                                <h3>{analytics?.atRiskCount || 0}</h3>
+                                            </div>
+                                        </div>
+                                    </div>
 
-                            {/* IA MONITORING TAB */}
-                            {activeTab === 'monitoring' && (
-                                <div className={styles.monitoringContainer}>
-                                    <div className={styles.card}>
+                                    {/* Charts Section */}
+                                    <div className={styles.gridTwo}>
+                                        <div className={styles.card}>
+                                            <div className={styles.cardHeader}>
+                                                <h3>CIE Performance Trend</h3>
+                                                <select className={styles.deptSelect} style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}>
+                                                    <option>All Subjects</option>
+                                                    {subjects.filter(s => s.name !== 'IC').map(s => (
+                                                        <option key={s.id}>{s.name}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                            <div className={styles.chartContainer}>
+                                                <Bar
+                                                    data={{
+                                                        labels: ['CIE-1', 'CIE-2', 'CIE-3', 'CIE-4', 'CIE-5'],
+                                                        datasets: [{
+                                                            label: 'Class Average',
+                                                            data: [38, 42, 35, 40, 44],
+                                                            backgroundColor: ['#3b82f6', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b'],
+                                                            borderRadius: 8
+                                                        }]
+                                                    }}
+                                                    options={{
+                                                        ...commonOptions,
+                                                        plugins: { legend: { display: false } },
+                                                        scales: { y: { beginAtZero: true, max: 50 } }
+                                                    }}
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className={styles.card}>
+                                            <div className={styles.cardHeader}>
+                                                <h3>Grade Distribution</h3>
+                                            </div>
+                                            <div className={styles.doughnutContainer}>
+                                                <Doughnut data={hodGradeDistribution} options={doughnutOptions} />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Subject-wise Performance Table */}
+                                    <div className={styles.card} style={{ marginTop: '1.5rem' }}>
                                         <div className={styles.cardHeader}>
-                                            <h3>Subject-wise IA Submission Status</h3>
+                                            <h3>Subject-wise Performance</h3>
                                         </div>
                                         <table className={styles.table}>
                                             <thead>
                                                 <tr>
-                                                    <th>Subject Name</th>
-                                                    <th>Faculty</th>
-                                                    <th>Status</th>
-                                                    <th>Pending Count</th>
-                                                    <th>Action</th>
+                                                    <th>Subject</th>
+                                                    <th>CIE-1 Avg</th>
+                                                    <th>CIE-2 Avg</th>
+                                                    <th>CIE-3 Avg</th>
+                                                    <th>CIE-4 Avg</th>
+                                                    <th>CIE-5 Avg</th>
+                                                    <th>Overall</th>
+                                                    <th>Pass %</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {subjectsByDept[selectedDept]?.map((sub, idx) => {
-                                                    const facName = facultyWorkload[idx % facultyWorkload.length]?.name || 'Unknown';
+                                                {subjects.filter(s => s.name !== 'IC').slice(0, 5).map((sub, idx) => {
+                                                    const cieAvgs = [38, 42, 35, 40, 44].map(v => v + (idx * 2 - 4));
+                                                    const overall = Math.round(cieAvgs.reduce((a, b) => a + b, 0) / 5);
+                                                    const passRate = 75 + (idx * 3);
                                                     return (
-                                                        <tr key={idx}>
-                                                            <td>{sub}</td>
-                                                            <td>{facName}</td>
+                                                        <tr key={sub.id}>
+                                                            <td style={{ fontWeight: 600 }}>{sub.name}</td>
+                                                            {cieAvgs.map((avg, i) => (
+                                                                <td key={i}>
+                                                                    <span style={{
+                                                                        color: avg >= 40 ? '#16a34a' : avg >= 30 ? '#ca8a04' : '#dc2626',
+                                                                        fontWeight: 500
+                                                                    }}>{avg}/50</span>
+                                                                </td>
+                                                            ))}
+                                                            <td style={{ fontWeight: 700 }}>{overall}/50</td>
                                                             <td>
-                                                                <span className={`${styles.statusBadge} ${idx % 3 === 0 ? styles.approved : idx % 3 === 1 ? styles.submitted : styles.pending}`}>
-                                                                    {idx % 3 === 0 ? 'Approved' : idx % 3 === 1 ? 'Submitted' : 'Pending'}
+                                                                <span className={`${styles.statusBadge} ${passRate >= 80 ? styles.approved : passRate >= 60 ? styles.submitted : styles.pending}`}>
+                                                                    {passRate}%
                                                                 </span>
-                                                            </td>
-                                                            <td>{idx % 3 === 2 ? '12 Students' : '-'}</td>
-                                                            <td>
-                                                                <button
-                                                                    className={styles.actionBtn}
-                                                                    onClick={() => setViewingSubject({ name: sub, faculty: facName })}
-                                                                >
-                                                                    View
-                                                                </button>
                                                             </td>
                                                         </tr>
                                                     );
@@ -585,96 +546,54 @@ const HODDashboard = () => {
                                         </table>
                                     </div>
 
-                                    {/* Subject Details Modal */}
-                                    {viewingSubject && (
-                                        <div className={styles.modalOverlay} onClick={() => setViewingSubject(null)}>
-                                            <div className={styles.modalContent} onClick={e => e.stopPropagation()}>
-                                                <div className={styles.modalHeader}>
-                                                    <h2>{viewingSubject.name}</h2>
-                                                    <button className={styles.closeBtn} onClick={() => setViewingSubject(null)}>
-                                                        <X size={24} />
-                                                    </button>
-                                                </div>
-                                                <div className={styles.modalBody}>
-                                                    <p style={{ marginBottom: '1.5rem', color: '#6b7280' }}>
-                                                        Faculty: <span style={{ color: '#111827', fontWeight: 600 }}>{viewingSubject.faculty}</span>
-                                                    </p>
-                                                    <div className={styles.tableWrapper}>
-                                                        <table className={styles.table}>
-                                                            <thead>
-                                                                <tr>
-                                                                    <th>Sl. No.</th>
-                                                                    <th>Reg No</th>
-                                                                    <th>Student Name</th>
-                                                                    <th>CIE-1</th>
-                                                                    <th>CIE-2</th>
-                                                                    <th>CIE-3</th>
-                                                                    <th>Average</th>
-                                                                </tr>
-                                                            </thead>
-                                                            <tbody>
-                                                                {deptStudents.map((student, index) => (
-                                                                    <tr key={student.id}>
-                                                                        <td>{index + 1}</td>
-                                                                        <td>{student.regNo}</td>
-                                                                        <td>{student.name}</td>
-                                                                        <td>{student.marks.ia1}</td>
-                                                                        <td>{student.marks.ia2}</td>
-                                                                        <td>{student.marks.ia3}</td>
-                                                                        <td style={{ fontWeight: 'bold' }}>
-                                                                            {Math.round((Number(student.marks.ia1) + Number(student.marks.ia2) + Number(student.marks.ia3)) / 3)}
-                                                                        </td>
-                                                                    </tr>
-                                                                ))}
-                                                            </tbody>
-                                                        </table>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-
-                            {/* STUDENT PERFORMANCE TAB */}
-                            {activeTab === 'performance' && (
-                                <div className={styles.performanceContainer}>
-                                    <div className={styles.gridTwo}>
-                                        <div className={styles.card}>
-                                            <h3>Semester Progress</h3>
-                                            <div className={styles.chartContainer}>
-                                                <Line data={hodTrendData} options={commonOptions} />
-                                            </div>
-                                        </div>
-                                        <div className={styles.card}>
-                                            <h3>Grade Distribution</h3>
-                                            <div className={styles.doughnutContainer}>
-                                                <Doughnut data={hodGradeDistribution} options={doughnutOptions} />
-                                            </div>
-                                        </div>
-                                    </div>
-
+                                    {/* At-Risk Students Section */}
                                     <div className={styles.card} style={{ marginTop: '1.5rem' }}>
-                                        <h3>At-Risk Students (Action Required)</h3>
+                                        <div className={styles.cardHeader}>
+                                            <h3 style={{ color: '#dc2626' }}>⚠️ At-Risk Students (Action Required)</h3>
+                                            <button className={styles.secondaryBtn} style={{ fontSize: '0.85rem' }}>
+                                                <Download size={14} /> Export List
+                                            </button>
+                                        </div>
                                         <table className={styles.table}>
                                             <thead>
                                                 <tr>
                                                     <th>Reg No</th>
-                                                    <th>Name</th>
+                                                    <th>Student Name</th>
                                                     <th>Attendance</th>
-                                                    <th>Avg Marks</th>
+                                                    <th>CIE Average</th>
                                                     <th>Issue</th>
+                                                    <th>Action</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 {atRiskStudents.map((student) => (
                                                     <tr key={student.id}>
                                                         <td>{student.rollNo}</td>
-                                                        <td>{student.name}</td>
-                                                        <td className={styles.textRed}>{student.attendance}%</td>
-                                                        <td className={styles.textRed}>{student.avgMarks}/25</td>
+                                                        <td style={{ fontWeight: 500 }}>{student.name}</td>
+                                                        <td>
+                                                            <span style={{
+                                                                color: student.attendance < 75 ? '#dc2626' : '#16a34a',
+                                                                fontWeight: 600
+                                                            }}>{student.attendance}%</span>
+                                                        </td>
+                                                        <td>
+                                                            <span style={{
+                                                                color: student.avgMarks < 20 ? '#dc2626' : '#ca8a04',
+                                                                fontWeight: 600
+                                                            }}>{student.avgMarks}/50</span>
+                                                        </td>
                                                         <td>
                                                             <span className={styles.issueTag}>{student.issue}</span>
+                                                        </td>
+                                                        <td>
+                                                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                                                <button className={styles.secondaryBtn} style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem' }} onClick={() => alert(`Sending notification to ${student.name}`)}>
+                                                                    Notify
+                                                                </button>
+                                                                <button className={styles.secondaryBtn} style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem', background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca' }} onClick={() => alert(`Scheduling meeting with ${student.name}`)}>
+                                                                    Meet
+                                                                </button>
+                                                            </div>
                                                         </td>
                                                     </tr>
                                                 ))}
@@ -683,112 +602,82 @@ const HODDashboard = () => {
                                     </div>
                                 </div>
                             )}
-
-                            {/* FACULTY TAB */}
-                            {activeTab === 'faculty' && (
-                                <div className={styles.facultyContainer}>
-                                    <div className={styles.card}>
-                                        <h3>Faculty Workload & Performance</h3>
-                                        <div className={styles.facultyList}>
-                                            {facultyWorkload.map(fac => (
-                                                <div key={fac.id} className={styles.facultyItem}>
-                                                    <div className={styles.facProfile}>
-                                                        <div className={styles.avatarSm}>{fac.name.charAt(4)}</div>
-                                                        <div>
-                                                            <p className={styles.facName}>{fac.name}</p>
-                                                            <small className={styles.facStatus}>{fac.status}</small>
-                                                        </div>
-                                                    </div>
-                                                    <div className={styles.facMetrics}>
-                                                        <div className={styles.metric}>
-                                                            <span>Submission Punctuality</span>
-                                                            <div className={styles.progressBar}>
-                                                                <div style={{ width: '90%' }} className={styles.fillGreen}></div>
-                                                            </div>
-                                                        </div>
-                                                        <div className={styles.metric}>
-                                                            <span>Student Avg Performance</span>
-                                                            <div className={styles.progressBar}>
-                                                                <div style={{ width: '75%' }} className={styles.fillBlue}></div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* APPROVALS TAB */}
+                            {activeTab === 'faculty' && (<div className={styles.facultyContainer}><div className={styles.card}><div className={styles.cardHeader}><h3>Department Faculty</h3><button className={styles.primaryBtn} onClick={() => setShowAddFacultyModal(true)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Users size={16} /> Add New Faculty</button></div><div className={styles.facultyList} style={{ marginTop: '1.5rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(300px,1fr))', gap: '1.5rem' }}>{facultyList.length > 0 ? facultyList.map(fac => (<div key={fac.id} className={styles.facultyItem} style={{ border: '1px solid #e2e8f0', borderRadius: '12px', padding: '1.5rem', background: 'white' }}><div className={styles.facProfile} style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: '1rem' }}><div className={styles.avatarSm} style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '1.2rem' }}>{fac.fullName ? fac.fullName.charAt(0) : fac.username.charAt(0)}</div><div><p className={styles.facName} style={{ fontWeight: 600, fontSize: '1.1rem', color: '#1e293b', margin: 0 }}>{fac.fullName || fac.username}</p><small className={styles.facStatus} style={{ color: '#64748b' }}>{fac.designation}</small></div></div><div style={{ marginBottom: '1rem' }}><span style={{ fontSize: '0.85rem', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase' }}>Subjects</span><div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.5rem' }}>{fac.subjects && fac.subjects.length > 0 ? fac.subjects.map((sub, i) => (<span key={i} style={{ fontSize: '0.8rem', background: '#f1f5f9', padding: '4px 8px', borderRadius: '4px', color: '#475569' }}>{sub}</span>)) : (<span style={{ fontSize: '0.8rem', color: '#cbd5e1' }}>No active subjects</span>)}</div></div><div className={styles.facActions} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginTop: '1.5rem', borderTop: '1px solid #f1f5f9', paddingTop: '1rem' }}><button className={styles.secondaryBtn} style={{ fontSize: '0.9rem', padding: '0.5rem', width: '100%', justifyContent: 'center' }} onClick={() => alert(`Navigating to dashboard of ${fac.username}...`)}>View Dashboard</button><button className={styles.secondaryBtn} style={{ fontSize: '0.9rem', padding: '0.5rem', width: '100%', justifyContent: 'center' }} onClick={() => alert(`Start Chat with ${fac.username}`)}>Message</button></div></div>)) : (<div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '3rem', color: '#64748b' }}><Users size={48} style={{ marginBottom: '1rem', color: '#cbd5e1' }} /><p>No faculty members found for this department.</p></div>)}</div></div>{showAddFacultyModal && (<div className={styles.modalOverlay}><div className={styles.modalContent} style={{ maxWidth: '500px' }}><div className={styles.modalHeader}><h3>Add New Faculty</h3><button className={styles.closeBtn} onClick={() => setShowAddFacultyModal(false)}><X size={24} /></button></div><div className={styles.modalBody}><form onSubmit={handleAddFaculty} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}><div className={styles.formGroup}><label>Full Name</label><input name="fullName" required placeholder="e.g. Dr. John Doe" className={styles.input} /></div><div className={styles.formGroup}><label>Username</label><input name="username" required placeholder="jdoe" className={styles.input} /></div><div className={styles.formGroup}><label>Email</label><input name="email" type="email" required placeholder="john@college.edu" className={styles.input} /></div><div className={styles.formGroup}><label>Temporary Password</label><input name="password" required defaultValue="password123" className={styles.input} /></div><div className={styles.formGroup}><label>Designation</label><select name="designation" className={styles.input}><option>Assistant Professor</option><option>Associate Professor</option><option>Professor</option><option>Guest Faculty</option></select></div><div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1rem' }}><button type="button" className={styles.secondaryBtn} onClick={() => setShowAddFacultyModal(false)}>Cancel</button><button type="submit" className={styles.primaryBtn} style={{ background: '#2563eb', color: 'white' }}>Create Account</button></div></form></div></div></div>)}</div>)}
                             {activeTab === 'approvals' && (
                                 <div className={styles.approvalsContainer}>
                                     <div className={styles.infoBanner}>
                                         <CheckCircle size={20} />
-                                        <p>You have <strong>2</strong> IA Bundles pending for final approval.</p>
+                                        <p>You have <strong>{pendingApprovals.length}</strong> IA Bundles pending for final approval.</p>
                                     </div>
-
-                                    {subjectsByDept[selectedDept]?.slice(0, 2).map((sub, idx) => (
-                                        <div key={idx} className={styles.approvalCard}>
-                                            <div className={styles.approvalHeader}>
-                                                <div>
-                                                    <h4>{sub}</h4>
-                                                    <span>IA-2 Marks | Faculty: {facultyWorkload[idx]?.name}</span>
-                                                </div>
-                                                <div className={styles.approvlActions}>
-                                                    <button className={styles.rejectBtn}>Reject</button>
-                                                    <button className={styles.approveBtn}>Approve & Lock</button>
-                                                </div>
-                                            </div>
-                                            <table className={styles.miniTable}>
-                                                <thead>
-                                                    <tr>
-                                                        <th>Reg No</th>
-                                                        <th>Student</th>
-                                                        <th>Marks</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {deptStudents?.slice(0, 3).map(st => (
-                                                        <tr key={st.id}>
-                                                            <td>{st.regNo}</td>
-                                                            <td>{st.name}</td>
-                                                            <td>{st.marks.ia2}/25</td>
-                                                        </tr>
-                                                    ))}
-                                                    <tr>
-                                                        <td colSpan="3" style={{ textAlign: 'center', color: '#6b7280' }}>+ {deptStudents?.length > 3 ? deptStudents.length - 3 : 0} more records</td>
-                                                    </tr>
-                                                </tbody>
-                                            </table>
+                                    {approvalLoading ? (
+                                        <div style={{ textAlign: 'center', padding: '3rem', color: '#6b7280' }}>Loading pending submissions...</div>
+                                    ) : pendingApprovals.length === 0 ? (
+                                        <div style={{ textAlign: 'center', padding: '3rem', color: '#6b7280' }}>
+                                            <CheckCircle size={48} style={{ marginBottom: '1rem', color: '#10b981' }} />
+                                            <p>No pending submissions. All marks have been reviewed!</p>
                                         </div>
-                                    ))}
+                                    ) : (
+                                        pendingApprovals.map((approval, idx) => (
+                                            <div key={idx} className={styles.approvalCard}>
+                                                <div className={styles.approvalHeader}>
+                                                    <div>
+                                                        <h4>{approval.subjectName}</h4>
+                                                        <span>{approval.iaType} Marks | Faculty: {approval.facultyName} | {approval.studentCount} students</span>
+                                                    </div>
+                                                    <div className={styles.approvlActions}>
+                                                        <button className={styles.rejectBtn} onClick={() => handleRejectMarks(approval.subjectId, approval.iaType)}>Reject</button>
+                                                        <button className={styles.approveBtn} onClick={() => handleApproveMarks(approval.subjectId, approval.iaType)}>Approve & Lock</button>
+                                                    </div>
+                                                </div>
+                                                <table className={styles.miniTable}>
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Reg No</th>
+                                                            <th>Student</th>
+                                                            <th>Marks</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {approval.marks?.slice(0, 3).map(st => (
+                                                            <tr key={st.studentId}>
+                                                                <td>{st.regNo}</td>
+                                                                <td>{st.studentName}</td>
+                                                                <td>{st.totalScore}/50</td>
+                                                            </tr>
+                                                        ))}
+                                                        {approval.marks?.length > 3 && (
+                                                            <tr>
+                                                                <td colSpan="3" style={{ textAlign: 'center', color: '#6b7280' }}>+ {approval.marks.length - 3} more records</td>
+                                                            </tr>
+                                                        )}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        ))
+                                    )}
                                 </div>
                             )}
-
-                            {/* ANALYTICS TAB */}
-                            {activeTab === 'analytics' && (
-                                <div className={styles.analyticsContainer}>
-                                    <div className={styles.gridTwo}>
+                            {activeTab === 'analytics' && (<div className={styles.analyticsContainer}><div className={styles.gridTwo}><div className={styles.card}><h3>IA Submission Status</h3><div className={styles.doughnutContainer}><Pie data={iaSubmissionStatus} options={doughnutOptions} /></div></div><div className={styles.card}><h3>Year-on-Year Improvement</h3><div className={styles.chartContainer}><Line data={hodTrendData} options={commonOptions} /></div></div></div><div className={styles.card} style={{ marginTop: '1.5rem' }}><h3>Download Reports</h3><div className={styles.downloadOptions}><button className={styles.downloadBtn}><FileText size={16} /> Department IA Report (PDF)</button><button className={styles.downloadBtn}><FileText size={16} /> Consolidated Marks Sheet (Excel)</button><button className={styles.downloadBtn}><FileText size={16} /> Low Performers List (CSV)</button></div></div></div>)}
+                            {activeTab === 'lesson-plans' && (<div className={styles.lessonPlansContainer}><div className={styles.card}><div className={styles.cardHeader}><h3>Department Syllabus Progress</h3></div><div className={styles.gridContainer} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(350px,1fr))', gap: '1.5rem', marginTop: '1rem' }}>{subjectsByDept[selectedDept]?.map((subName, idx) => { const subId = idx + 1; const realSub = subjects.find(s => s.name === subName); const idToUse = realSub ? realSub.id : subId; const savedTracker = localStorage.getItem('syllabusTracker'); const progress = savedTracker ? (JSON.parse(savedTracker)[idToUse] || {}) : {}; const savedStructure = localStorage.getItem('syllabusStructure'); const structure = savedStructure ? (JSON.parse(savedStructure)[idToUse] || []) : []; const savedCie = localStorage.getItem('cieSelector'); const cieSelector = savedCie ? (JSON.parse(savedCie)[idToUse] || {}) : {}; const units = structure.length > 0 ? structure : [{ id: 'u1', name: 'Unit 1: Introduction' }, { id: 'u2', name: 'Unit 2: Core Concepts' }, { id: 'u3', name: 'Unit 3: Advanced Topics' }, { id: 'u4', name: 'Unit 4: Application' }, { id: 'u5', name: 'Unit 5: Case Studies' }]; const completedCount = units.filter(u => progress[u.id]).length; const totalUnits = units.length; const percent = totalUnits > 0 ? Math.round((completedCount / totalUnits) * 100) : 0; return (<div key={idx} style={{ border: '1px solid #e5e7eb', borderRadius: '8px', padding: '1.5rem' }}><div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}><div><h4 style={{ margin: '0 0 0.25rem', fontSize: '1.1rem', color: '#111827' }}>{subName}</h4><span style={{ fontSize: '0.85rem', color: '#6b7280' }}>Faculty: {facultyWorkload[idx % facultyWorkload.length]?.name || 'Unknown'}</span></div><div style={{ textAlign: 'right' }}><span style={{ fontSize: '1.25rem', fontWeight: 'bold', color: percent === 100 ? '#10b981' : '#3b82f6' }}>{percent}%</span></div></div><div style={{ height: '8px', background: '#f3f4f6', borderRadius: '4px', overflow: 'hidden', marginBottom: '1rem' }}><div style={{ width: `${percent}%`, height: '100%', background: percent === 100 ? '#10b981' : '#3b82f6', transition: 'width 0.5s ease' }}></div></div><div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>{units.slice(0, 3).map(u => (<div key={u.id} style={{ display: 'flex', alignItems: 'center', fontSize: '0.9rem', color: progress[u.id] ? '#374151' : '#9ca3af' }}><div style={{ width: '16px', height: '16px', borderRadius: '50%', border: '2px solid', borderColor: progress[u.id] ? '#10b981' : '#d1d5db', background: progress[u.id] ? '#10b981' : 'transparent', marginRight: '8px', display: 'grid', placeItems: 'center', flexShrink: 0 }}>{progress[u.id] && <CheckCircle size={10} color="white" />}</div><span style={{ textDecoration: progress[u.id] ? 'line-through' : 'none', marginRight: '8px' }}>{u.name}</span>{cieSelector[u.id] && (<span style={{ fontSize: '0.7rem', fontWeight: 'bold', color: '#7c3aed', backgroundColor: '#f5f3ff', padding: '1px 6px', borderRadius: '4px', border: '1px solid #7c3aed', marginLeft: 'auto' }}>CIE</span>)}</div>))}{units.length > 3 && (<div style={{ fontSize: '0.8rem', color: '#6b7280', paddingLeft: '24px' }}>+ {units.length - 3} more topics</div>)}</div></div>); })}</div></div></div>)}
+                            {activeTab === 'cie-schedule' && (<div className={styles.cieScheduleContainer}><div className={styles.gridTwo}><div className={styles.card}><h3>Schedule New CIE Exam</h3><form onSubmit={handleScheduleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}><div className={styles.formGroup}><label>Select Subject</label><select name="subjectId" required className={styles.deptSelect} style={{ width: '100%' }}><option value="">-- Choose Subject --</option>{subjects.map(sub => (<option key={sub.id} value={sub.id}>{sub.name} ({sub.code})</option>))}</select></div><div className={styles.formGroup}><label>CIE Number</label><div style={{ display: 'flex', gap: '0.5rem' }}>{[1, 2, 3, 4, 5].map(num => (<label key={num} style={{ flex: 1, padding: '0.75rem', border: '1px solid #cbd5e1', borderRadius: '8px', textAlign: 'center', cursor: 'pointer', background: scheduleForm.cieNumber === num ? '#eff6ff' : 'white', borderColor: scheduleForm.cieNumber === num ? '#3b82f6' : '#cbd5e1', color: scheduleForm.cieNumber === num ? '#2563eb' : '#64748b', fontWeight: scheduleForm.cieNumber === num ? '600' : '400' }}><input type="radio" name="cieNumber" value={num} checked={scheduleForm.cieNumber === num} onChange={() => setScheduleForm({ ...scheduleForm, cieNumber: num })} style={{ display: 'none' }} />CIE-{num}</label>))}</div></div><div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}><div className={styles.formGroup}><label>Date</label><input type="date" name="scheduledDate" required className={styles.input} /></div><div className={styles.formGroup}><label>Time</label><input type="time" name="startTime" required className={styles.input} /></div></div><div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}><div className={styles.formGroup}><label>Duration (mins)</label><input type="number" name="durationMinutes" defaultValue="60" className={styles.input} /></div><div className={styles.formGroup}><label>Room / Hall</label><input name="examRoom" placeholder="e.g. LH-201" className={styles.input} /></div></div><div className={styles.formGroup}><label>Integration Instructions (Optional)</label><textarea name="instructions" placeholder="Special instructions for faculty/students..." className={styles.input} style={{ minHeight: '80px', resize: 'vertical' }}></textarea></div><button type="submit" className={styles.primaryBtn} style={{ marginTop: '0.5rem', justifyContent: 'center' }}><Megaphone size={18} /> Publish Schedule</button></form></div><div className={styles.card}><h3>Upcoming Scheduled Exams</h3><div className={styles.alertList}>{departmentAnnouncements.length > 0 ? departmentAnnouncements.map(ann => (<div key={ann.id} className={`${styles.alertItem} ${styles.info}`} style={{ alignItems: 'center' }}><div style={{ background: 'white', padding: '0.5rem', borderRadius: '8px', textAlign: 'center', minWidth: '60px' }}><span style={{ display: 'block', fontSize: '1.2rem', fontWeight: 'bold', color: '#2563eb' }}>{new Date(ann.scheduledDate).getDate()}</span><span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#64748b' }}>{new Date(ann.scheduledDate).toLocaleString('default', { month: 'short' })}</span></div><div style={{ flex: 1 }}><div style={{ display: 'flex', justifyContent: 'space-between' }}><h4 style={{ margin: '0 0 0.25rem', fontSize: '1rem', color: '#1e293b' }}>{ann.subject ? ann.subject.name : 'Unknown Subject'} <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 'normal' }}>({ann.subject?.code})</span></h4><span className={styles.statusBadge} style={{ background: '#dbeafe', color: '#1e40af' }}>CIE-{ann.cieNumber}</span></div><p style={{ display: 'flex', gap: '1rem', alignItems: 'center', color: '#475569', fontSize: '0.85rem' }}><span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Clock size={12} /> {ann.startTime || '10:00 AM'} ({ann.durationMinutes}m)</span>{ann.examRoom && <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><MapPin size={12} /> {ann.examRoom}</span>}</p></div></div>)) : (<div style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8' }}>No exams scheduled yet.</div>)}</div></div></div></div>)}
+                            {activeTab === 'reports' && (
+                                <div className={styles.sectionContainer}>
+                                    <h2 className={styles.sectionTitle}>Reports & Archives</h2>
+                                    <div className={styles.cardsGrid}>
                                         <div className={styles.card}>
-                                            <h3>IA Submission Status</h3>
-                                            <div className={styles.doughnutContainer}>
-                                                <Pie data={iaSubmissionStatus} options={doughnutOptions} />
+                                            <div className={styles.cardHeader}>
+                                                <h3 className={styles.cardTitle}>IA Marks Report</h3>
                                             </div>
-                                        </div>
-                                        <div className={styles.card}>
-                                            <h3>Year-on-Year Improvement</h3>
-                                            <div className={styles.chartContainer}>
-                                                <Line data={hodTrendData} options={commonOptions} />
+                                            <div style={{ padding: '1rem', color: '#666' }}>
+                                                <p>Download comprehensive PDF report of IA marks for all subjects in {selectedDept}.</p>
+                                                <button
+                                                    className={styles.primaryBtn}
+                                                    style={{ marginTop: '1rem', width: '100%', justifyContent: 'center' }}
+                                                    onClick={() => window.open(`http://127.0.0.1:8083/api/reports/marks/${selectedDept}/pdf`, '_blank')}
+                                                >
+                                                    <Download size={18} /> Download PDF
+                                                </button>
                                             </div>
-                                        </div>
-                                    </div>
-                                    <div className={styles.card} style={{ marginTop: '1.5rem' }}>
-                                        <h3>Download Reports</h3>
-                                        <div className={styles.downloadOptions}>
-                                            <button className={styles.downloadBtn}><FileText size={16} /> Department IA Report (PDF)</button>
-                                            <button className={styles.downloadBtn}><FileText size={16} /> Consolidated Marks Sheet (Excel)</button>
-                                            <button className={styles.downloadBtn}><FileText size={16} /> Low Performers List (CSV)</button>
                                         </div>
                                     </div>
                                 </div>

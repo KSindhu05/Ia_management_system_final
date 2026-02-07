@@ -18,4 +18,17 @@ public class HODController {
     public HODDashboardData getDashboardData() {
         return hodService.getDashboardData();
     }
+
+    @GetMapping("/faculty")
+    public org.springframework.http.ResponseEntity<java.util.List<com.ia.management.model.FacultyDTO>> getFacultyByDepartment(
+            @org.springframework.web.bind.annotation.RequestParam String department) {
+        return org.springframework.http.ResponseEntity.ok(hodService.getDepartmentFaculty(department));
+    }
+
+    @org.springframework.web.bind.annotation.PostMapping("/faculty")
+    public org.springframework.http.ResponseEntity<?> addFaculty(
+            @org.springframework.web.bind.annotation.RequestBody com.ia.management.model.CreateFacultyRequest request) {
+        hodService.addFaculty(request);
+        return org.springframework.http.ResponseEntity.ok("Faculty added successfully");
+    }
 }

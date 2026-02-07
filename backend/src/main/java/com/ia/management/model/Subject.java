@@ -26,9 +26,8 @@ public class Subject {
     private String semester; // "2nd"
 
     // Configuration for Max Marks
-    private Integer co1MaxMarks; // e.g., 35
-    private Integer co2MaxMarks; // e.g., 15
-    private Integer totalMaxMarks; // e.g., 50
+    // Configuration for Max Marks
+    private Integer maxMarks; // e.g., 50 for all CIEs
 
     // Type
     private String type; // "Theory" or "Lab"

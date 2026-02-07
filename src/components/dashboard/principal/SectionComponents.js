@@ -1,76 +1,202 @@
 import React, { memo } from 'react';
-import { Calendar, Download, Bell, FileText } from 'lucide-react';
+import { Calendar, Download, Bell, FileText, Search, Plus, Filter, Briefcase, Users, GraduationCap, Clock } from 'lucide-react';
 import styles from '../../../pages/PrincipalDashboard.module.css';
 import {
     principalFacultyList, principalTimetables, principalCirculars,
     principalReports, principalGrievances
 } from '../../../utils/mockData';
 
-export const FacultyDirectorySection = memo(({ onAdd }) => (
-    <div className={styles.sectionVisible}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-            <h2 className={styles.chartTitle}>Staff Directory</h2>
-            <button className={styles.primaryBtn} onClick={onAdd}>+ Add Faculty</button>
-        </div>
-        <div className={styles.glassCard}>
-            <table className={styles.table}>
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Name</th>
-                        <th>Department</th>
-                        <th>Designation</th>
-                        <th>Workload</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {principalFacultyList.map(f => (
-                        <tr key={f.id}>
-                            <td>{f.id}</td>
-                            <td style={{ fontWeight: 600 }}>{f.name}</td>
-                            <td>{f.dept}</td>
-                            <td>{f.designation}</td>
-                            <td>{f.workload}</td>
-                            <td>
-                                <span style={{
-                                    padding: '4px 8px', borderRadius: '12px', fontSize: '0.8rem',
-                                    background: f.status === 'Active' ? '#dcfce7' : '#fee2e2',
-                                    color: f.status === 'Active' ? '#16a34a' : '#991b1b'
-                                }}>{f.status}</span>
-                            </td>
-                            <td>
-                                <button className={styles.actionBtn}>View Profile</button>
-                            </td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
-        </div>
-    </div>
-));
+export const FacultyDirectorySection = memo(({ onAdd }) => {
+    // Real data from user screenshot
+    const facultyMembers = [
+        { id: 'F001', name: 'Miss Manju Sree', dept: 'Basic Sc.', designation: 'Lecturer', workload: '18 Hrs/Wk', status: 'Active', qualifications: 'M.Sc (Maths)' },
+        { id: 'F002', name: 'Ramesh Gouda', dept: 'ME', designation: 'Lecturer', workload: '22 Hrs/Wk', status: 'Active', qualifications: 'B.E, M.Tech' },
+        { id: 'F003', name: 'Wahida Banu', dept: 'CS', designation: 'HOD', workload: '12 Hrs/Wk', status: 'Active', qualifications: 'Ph.D' },
+        { id: 'F004', name: 'Nasrin Banu', dept: 'English', designation: 'Lecturer', workload: '16 Hrs/Wk', status: 'Active', qualifications: 'M.A (English)' },
+        { id: 'F005', name: 'Sunil Babu H', dept: 'CS', designation: 'Asst. Professor', workload: '20 Hrs/Wk', status: 'Active', qualifications: 'M.Tech' },
+        { id: 'F006', name: 'Shreedar Singh', dept: 'Humanities', designation: 'Lecturer', workload: '19 Hrs/Wk', status: 'Active', qualifications: 'M.A' }
+    ];
 
-export const TimetablesSection = memo(({ onDownload }) => (
-    <div className={styles.sectionVisible}>
-        <h2 className={styles.chartTitle} style={{ marginBottom: '1.5rem' }}>Master Timetables</h2>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
-            {principalTimetables.map(t => (
-                <div key={t.id} className={styles.glassCard} style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1.5rem' }}>
-                    <div style={{ padding: '0.75rem', borderRadius: '50%', background: '#e0f2fe', color: '#0284c7' }}>
-                        <Calendar size={24} />
+    return (
+        <div className={styles.sectionVisible}>
+            {/* --- FACULTY BANNER --- */}
+            <div style={{
+                background: 'linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%)',
+                borderRadius: '24px',
+                padding: '2rem',
+                color: 'white',
+                marginBottom: '2rem',
+                position: 'relative',
+                overflow: 'hidden',
+                boxShadow: '0 10px 25px -5px rgba(2, 132, 199, 0.5)'
+            }}>
+                <div style={{ position: 'absolute', top: '-20px', right: '-20px', width: '180px', height: '180px', background: 'rgba(255,255,255,0.1)', borderRadius: '50%' }}></div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', position: 'relative', zIndex: 1 }}>
+                    <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '0.5rem' }}>
+                            <div style={{ padding: '8px', background: 'rgba(255,255,255,0.2)', borderRadius: '12px', backdropFilter: 'blur(4px)' }}>
+                                <Briefcase size={24} color="white" />
+                            </div>
+                            <span style={{ fontSize: '0.9rem', fontWeight: 600, letterSpacing: '0.5px', textTransform: 'uppercase', opacity: 0.9 }}>Academic Staff</span>
+                        </div>
+                        <h1 style={{ margin: 0, fontSize: '2.2rem', fontWeight: 800 }}>Staff Directory</h1>
+                        <p style={{ margin: '0.5rem 0 0 0', opacity: 0.9 }}>Manage faculty profiles, workload, and performance.</p>
                     </div>
-                    <div style={{ flex: 1 }}>
-                        <h4 style={{ margin: '0 0 0.25rem 0' }}>{t.dept}</h4>
-                        <p style={{ margin: 0, fontSize: '0.9rem', color: '#64748b' }}>{t.semester}</p>
-                        <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.75rem', color: '#94a3b8' }}>Updated {t.updated}</p>
+                    <div style={{ display: 'flex', gap: '2rem', textAlign: 'right' }}>
+                        <div>
+                            <p style={{ margin: 0, fontSize: '0.85rem', opacity: 0.8 }}>Total Faculty</p>
+                            <p style={{ margin: 0, fontSize: '1.8rem', fontWeight: 700 }}>{facultyMembers.length}</p>
+                        </div>
+                        <div style={{ width: '1px', height: '40px', background: 'rgba(255,255,255,0.3)' }}></div>
+                        <div>
+                            <p style={{ margin: 0, fontSize: '0.85rem', opacity: 0.8 }}>Avg Workload</p>
+                            <p style={{ margin: 0, fontSize: '1.8rem', fontWeight: 700 }}>18h/wk</p>
+                        </div>
                     </div>
-                    <button className={styles.iconBtn} onClick={() => onDownload(t)}><Download size={18} /></button>
                 </div>
-            ))}
+            </div>
+
+            {/* --- TOOLBAR --- */}
+            <div style={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem',
+                background: 'white', padding: '1rem', borderRadius: '16px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)',
+                border: '1px solid #e2e8f0'
+            }}>
+                <div style={{ position: 'relative', width: '300px' }}>
+                    <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                    <input
+                        placeholder="Search Faculty..."
+                        style={{
+                            padding: '0.6rem 0.6rem 0.6rem 2.5rem', borderRadius: '10px',
+                            border: '1px solid #e2e8f0', outline: 'none', width: '100%', fontSize: '0.9rem',
+                            background: '#f8fafc'
+                        }}
+                    />
+                </div>
+
+                <div style={{ display: 'flex', gap: '1rem' }}>
+                    <select style={{ padding: '0.6rem 1rem', borderRadius: '10px', border: '1px solid #e2e8f0', outline: 'none', background: 'white', color: '#64748b' }}>
+                        <option>All Departments</option>
+                        <option>CS</option>
+                        <option>ME</option>
+                        <option>EC</option>
+                    </select>
+                    <button
+                        className={styles.primaryBtn}
+                        onClick={onAdd}
+                        style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '0.6rem 1.2rem' }}
+                    >
+                        <Plus size={18} /> Add Faculty
+                    </button>
+                </div>
+            </div>
+
+            <div className={styles.tableCard}>
+                <table className={styles.table}>
+                    <thead>
+                        <tr>
+                            <th style={{ width: '50px' }}>Sl. No</th>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Department</th>
+                            <th>Designation</th>
+                            <th>Workload</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {facultyMembers.map((f, index) => (
+                            <tr key={f.id} style={{ transition: 'background 0.2s', cursor: 'default' }}>
+                                <td style={{ color: '#64748b', fontWeight: 500 }}>{index + 1}</td>
+                                <td style={{ fontFamily: 'monospace', color: '#64748b' }}>{f.id}</td>
+                                <td>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                        <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#e0f2fe', color: '#0369a1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
+                                            {f.name.charAt(0)}
+                                        </div>
+                                        <div>
+                                            <div style={{ fontWeight: 600, color: '#0f172a' }}>{f.name}</div>
+                                            <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{f.qualifications}</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span style={{ padding: '4px 8px', borderRadius: '6px', background: '#f1f5f9', fontWeight: 600, fontSize: '0.85rem' }}>{f.dept}</span>
+                                </td>
+                                <td>{f.designation}</td>
+                                <td>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <Clock size={14} color="#64748b" />
+                                        {f.workload}
+                                    </div>
+                                </td>
+                                <td>
+                                    <span style={{
+                                        padding: '4px 10px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 600,
+                                        background: f.status === 'Active' ? '#dcfce7' : '#fee2e2',
+                                        color: f.status === 'Active' ? '#166534' : '#991b1b',
+                                        display: 'inline-flex', alignItems: 'center', gap: '4px'
+                                    }}>
+                                        <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'currentColor' }}></div>
+                                        {f.status}
+                                    </span>
+                                </td>
+                                <td>
+                                    <button className={styles.secondaryBtn} style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}>View Profile</button>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
         </div>
-    </div>
-));
+    );
+});
+
+export const TimetablesSection = memo(({ onDownload }) => {
+    // 2nd Sem Data only as requested
+    const timetables = [
+        { id: 1, dept: 'Computer Science', semester: '2nd Sem', updated: '2 days ago' },
+        { id: 2, dept: 'Mechanical', semester: '2nd Sem', updated: '1 week ago' },
+        { id: 3, dept: 'Civil Engineering', semester: '2nd Sem', updated: '3 days ago' },
+        { id: 4, dept: 'Electronics (EC)', semester: '2nd Sem', updated: '5 days ago' }
+    ];
+
+    return (
+        <div className={styles.sectionVisible}>
+            <h2 className={styles.chartTitle} style={{ marginBottom: '1.5rem' }}>Master Timetables</h2>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
+                {timetables.map(t => (
+                    <div key={t.id} className={styles.glassCard} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '2rem' }}>
+                        <div style={{ padding: '1rem', borderRadius: '50%', background: '#e0f2fe', color: '#0ea5e9', marginBottom: '1rem' }}>
+                            <Calendar size={32} />
+                        </div>
+                        <h3 style={{ margin: '0 0 0.5rem 0', fontWeight: 700, color: '#0f172a' }}>{t.dept}</h3>
+                        <p style={{ margin: 0, fontSize: '1rem', color: '#64748b', fontWeight: 500 }}>{t.semester}</p>
+                        <p style={{ margin: '0.5rem 0 1.5rem 0', fontSize: '0.8rem', color: '#94a3b8' }}>Updated {t.updated}</p>
+
+                        <button
+                            onClick={() => onDownload(t)}
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: '8px',
+                                padding: '0.6rem 1.2rem', borderRadius: '8px',
+                                border: '1px solid #e2e8f0', background: 'white',
+                                color: '#475569', cursor: 'pointer', transition: 'all 0.2s',
+                                fontWeight: 500
+                            }}
+                            onMouseOver={(e) => { e.currentTarget.style.borderColor = '#0ea5e9'; e.currentTarget.style.color = '#0ea5e9'; }}
+                            onMouseOut={(e) => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.color = '#475569'; }}
+                        >
+                            <Download size={16} /> Download PDF
+                        </button>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+});
 
 export const CircularsSection = memo(({ onNewBroadcast }) => (
     <div className={styles.sectionVisible}>

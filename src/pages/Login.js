@@ -32,9 +32,14 @@ const Login = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
+        // Alert 1: Beginning submit
+        // alert("Submitting login for: " + userId); 
 
-        const result = login(userId, password);
+        try {
+            const result = await login(userId, password);
+            // alert("Login result received: " + JSON.stringify(result));
 
+<<<<<<< HEAD
         if (result.success) {
             // Redirect based on role
             const id = userId.toUpperCase();
@@ -44,6 +49,27 @@ const Login = () => {
             else if (id.startsWith('P') || id === 'ADMIN' || id.startsWith('PRIN')) navigate('/dashboard/principal');
         } else {
             setError(result.message);
+=======
+            if (result.success) {
+                // Alert 2: Success
+                // alert("Login successful! Redirecting...");
+
+                const role = result.role;
+                if (role === 'student') navigate('/dashboard/student');
+                else if (role === 'faculty') navigate('/dashboard/faculty');
+                else if (role === 'hod') navigate('/dashboard/hod');
+                else if (role === 'principal') navigate('/dashboard/principal');
+                else navigate('/');
+            } else {
+                // Alert 3: Failure
+                console.error("Login failed:", result.message);
+                setError(result.message);
+            }
+        } catch (err) {
+            console.error("Unexpected error in handleSubmit:", err);
+            setError("Unexpected error: " + err.message);
+            alert("Unexpected error: " + err.message);
+>>>>>>> ksindhu-sync
         }
     };
 

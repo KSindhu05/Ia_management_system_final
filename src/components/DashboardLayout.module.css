@@ -19,19 +19,6 @@
     }
 }
 
-.bannerContainer {
-    width: 100%;
-    margin-bottom: 2rem;
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.bannerImage {
-    display: block;
-    object-fit: cover;
-}
-
 @media print {
     .mainContent {
         margin-left: 0 !important;

@@ -3,7 +3,7 @@ import DashboardLayout from '../components/DashboardLayout';
 import styles from './PrincipalDashboard.module.css';
 import {
     LayoutDashboard, Users, ShieldCheck, Calendar, BarChart2,
-    Briefcase, Bell, AlertTriangle, FileText
+    Briefcase, Bell, AlertTriangle, FileText, Building, Award, ScrollText, GraduationCap
 } from 'lucide-react';
 
 // Import Extracted Components
@@ -69,53 +69,40 @@ const PrincipalDashboard = () => {
             onClick: () => setActiveTab('overview')
         },
         {
-            label: 'CIE Compliance Monitor',
-            path: '/dashboard/principal/compliance',
-            icon: <ShieldCheck size={20} />,
-            isActive: activeTab === 'compliance',
-            onClick: () => setActiveTab('compliance')
-        },
-        {
-            label: 'Student Directory',
-            path: '/dashboard/principal/directory',
-            icon: <Users size={20} />,
-            isActive: activeTab === 'directory',
-            onClick: () => { setActiveTab('directory'); setSelectedDept(null); }
-        },
-        {
-            label: 'Faculty Info',
+            label: 'Staff Management',
             path: '/dashboard/principal/faculty',
             icon: <Briefcase size={20} />,
             isActive: activeTab === 'faculty',
             onClick: () => setActiveTab('faculty')
         },
         {
-            label: 'Timetables',
+            label: 'Student Progression',
+            path: '/dashboard/principal/directory',
+            icon: <Users size={20} />,
+            isActive: activeTab === 'directory',
+            onClick: () => { setActiveTab('directory'); setSelectedDept(null); }
+        },
+        {
+            label: 'Academic Schedule',
             path: '/dashboard/principal/timetables',
             icon: <Calendar size={20} />,
             isActive: activeTab === 'timetables',
             onClick: () => setActiveTab('timetables')
         },
         {
-            label: 'Circulars/Broadcasts',
+            label: 'CIE Compliance',
+            path: '/dashboard/principal/compliance',
+            icon: <ShieldCheck size={20} />,
+            isActive: activeTab === 'compliance',
+            onClick: () => setActiveTab('compliance')
+        },
+        {
+            label: 'Circulars & Notices',
             path: '/dashboard/principal/circulars',
             icon: <Bell size={20} />,
             isActive: activeTab === 'circulars',
-            onClick: () => setActiveTab('circulars')
-        },
-        {
-            label: 'Reports & Analytics',
-            path: '/dashboard/principal/reports',
-            icon: <BarChart2 size={20} />,
-            isActive: activeTab === 'reports',
-            onClick: () => setActiveTab('reports')
-        },
-        {
-            label: 'Grievances',
-            path: '/dashboard/principal/grievances',
-            icon: <AlertTriangle size={20} />,
-            isActive: activeTab === 'grievances',
-            onClick: () => setActiveTab('grievances')
+            onClick: () => setActiveTab('circulars'),
+            badge: 2
         },
     ], [activeTab]);
 
@@ -187,6 +174,30 @@ const PrincipalDashboard = () => {
                     {activeTab === 'circulars' && <CircularsSection onNewBroadcast={handleNewBroadcast} />}
                     {activeTab === 'reports' && <ReportsSection onDownload={handleDownload} />}
                     {activeTab === 'grievances' && <GrievancesSection onView={handleViewGrievance} />}
+
+                    {activeTab === 'exams' && (
+                        <div className={styles.sectionVisible}>
+                            <h2 className={styles.chartTitle}>Exam Section</h2>
+                            <div className={styles.glassCard} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '4rem', color: '#64748b' }}>
+                                <ScrollText size={64} style={{ marginBottom: '1rem', opacity: 0.5 }} />
+                                <h3>End-Semester Exam Management</h3>
+                                <p>Manage hall tickets, seating arrangements, and result analysis.</p>
+                                <button className={styles.primaryBtn} style={{ marginTop: '1rem' }}>Open Exam Portal</button>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'placements' && (
+                        <div className={styles.sectionVisible}>
+                            <h2 className={styles.chartTitle}>Placement Cell</h2>
+                            <div className={styles.glassCard} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '4rem', color: '#64748b' }}>
+                                <Award size={64} style={{ marginBottom: '1rem', opacity: 0.5 }} />
+                                <h3>Placement & Career Services</h3>
+                                <p>Track campus drives, student offers, and industry partnerships.</p>
+                                <button className={styles.primaryBtn} style={{ marginTop: '1rem' }}>View Placement Stats</button>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
 

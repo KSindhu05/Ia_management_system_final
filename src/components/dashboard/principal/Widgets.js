@@ -2,7 +2,7 @@ import React, { useState, memo } from 'react';
 import {
     Search, Award, Bell, Calendar, Briefcase, FileText, AlertTriangle, ShieldCheck, Users
 } from 'lucide-react';
-import { Line } from 'react-chartjs-2';
+import { Line, Doughnut } from 'react-chartjs-2';
 import styles from '../../../pages/PrincipalDashboard.module.css';
 import {
     studentsList, facultyClassAnalytics, principalSchedule, collegeStats,
@@ -259,3 +259,64 @@ export const ActionCenter = memo(() => (
         </div>
     </div>
 ));
+
+export const PendingApprovalsWidget = memo(() => {
+    const pendingItems = [
+        { id: 1, dept: 'Computer Science', subject: 'Data Structures', faculty: 'Dr. Smith', date: 'Just now' },
+        { id: 2, dept: 'Mechanical', subject: 'Thermodynamics', faculty: 'Prof. Rao', date: '2 hrs ago' },
+        { id: 3, dept: 'Civil', subject: 'Structural Analysis', faculty: 'Ms. Anjali', date: 'Yesterday' }
+    ];
+
+    return (
+        <div className={styles.glassCard} style={{ borderRadius: '24px', height: '100%', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                <h3 className={styles.chartTitle} style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.1rem' }}>
+                    <ShieldCheck size={20} color="#8b5cf6" /> Pending Approvals
+                </h3>
+                <span style={{ background: '#8b5cf6', color: 'white', padding: '2px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 'bold' }}>{pendingItems.length} New</span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', overflowY: 'auto' }}>
+                {pendingItems.map(item => (
+                    <div key={item.id} style={{ padding: '0.75rem', background: '#fcfaff', border: '1px solid #f3e8ff', borderRadius: '12px', transition: 'background 0.2s' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                            <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#1e293b' }}>{item.subject}</span>
+                            <span style={{ fontSize: '0.75rem', color: '#8b5cf6', background: '#f3e8ff', padding: '2px 6px', borderRadius: '4px' }}>{item.dept}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: '0.8rem', color: '#64748b' }}>{item.faculty}</span>
+                            <button style={{ padding: '4px 12px', background: '#8b5cf6', color: 'white', border: 'none', borderRadius: '6px', fontSize: '0.75rem', cursor: 'pointer' }} onClick={() => alert(`Reviewing ${item.subject}`)}>Review</button>
+                        </div>
+                    </div>
+                ))}
+            </div>
+            <button style={{ marginTop: 'auto', width: '100%', padding: '0.75rem', background: 'transparent', border: 'none', color: '#8b5cf6', fontWeight: 600, fontSize: '0.9rem', cursor: 'pointer' }}>View All Requests</button>
+        </div>
+    );
+});
+
+export const IAStatsWidget = memo(() => {
+    // Mock Data for IA Status
+    const data = {
+        labels: ['Conducted', 'Pending', 'Graded'],
+        datasets: [{
+            data: [65, 15, 20],
+            backgroundColor: ['#10b981', '#ef4444', '#3b82f6'],
+            borderWidth: 0,
+            hoverOffset: 4
+        }]
+    };
+
+    return (
+        <div style={{ height: '160px', width: '160px', position: 'relative' }}>
+            <Doughnut data={data} options={{
+                cutout: '70%',
+                plugins: { legend: { display: false }, tooltip: { enabled: true } },
+                maintainAspectRatio: false
+            }} />
+            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
+                <div style={{ fontSize: '1.2rem', fontWeight: '800', color: '#10b981' }}>85%</div>
+                <div style={{ fontSize: '0.6rem', color: '#64748b', fontWeight: 600 }}>Completed</div>
+            </div>
+        </div>
+    );
+});

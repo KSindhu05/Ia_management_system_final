@@ -1,21 +1,20 @@
 import React, { memo } from 'react';
-import { Users, GraduationCap, TrendingUp, ShieldCheck, ArrowUpRight, Activity } from 'lucide-react';
+import { Users, GraduationCap, TrendingUp, ShieldCheck, ArrowUpRight, Activity, BookOpen } from 'lucide-react';
 import { Doughnut, Line } from 'react-chartjs-2';
 import styles from '../../../pages/PrincipalDashboard.module.css';
 import { collegeStats, principalStats, academicTrends } from '../../../utils/mockData';
 import {
-    ConfidenceScoreWidget, FocusListWidget,
-    YearComparisonWidget, NotesWidget, FacultyPerformanceWidget, ScheduleWidget, ActionCenter
+    PendingApprovalsWidget, FocusListWidget,
+    YearComparisonWidget, NotesWidget, FacultyPerformanceWidget, ScheduleWidget, ActionCenter, IAStatsWidget
 } from './Widgets';
 
 // Premium Hero Card Component
-const HeroStatCard = ({ label, value, icon: Icon, color, trend, gradient }) => (
+const HeroStatCard = ({ label, value, icon: Icon, color, trend, gradient, customContent }) => (
     <div style={{
         background: gradient || 'white',
-        // backdropFilter: 'blur(20px)', // Removed for performance
         borderRadius: '24px',
         padding: '1.5rem',
-        boxShadow: '0 4px 20px -5px rgba(0,0,0,0.05)', // Simplified shadow
+        boxShadow: '0 4px 20px -5px rgba(0,0,0,0.05)',
         border: '1px solid rgba(226, 232, 240, 0.8)',
         display: 'flex',
         flexDirection: 'column',
@@ -31,20 +30,37 @@ const HeroStatCard = ({ label, value, icon: Icon, color, trend, gradient }) => (
     >
         <div style={{ position: 'absolute', top: '-10px', right: '-10px', width: '100px', height: '100px', borderRadius: '50%', background: color, opacity: 0.1, filter: 'blur(30px)' }}></div>
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', position: 'relative', zIndex: 1 }}>
-            <div style={{ background: 'white', padding: '10px', borderRadius: '14px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
-                <Icon size={24} color={color} />
-            </div>
-            {trend && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(255,255,255,0.5)', padding: '4px 8px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 600, color: '#16a34a' }}>
-                    <TrendingUp size={14} /> {trend}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', position: 'relative', zIndex: 1, height: '100%' }}>
+            {customContent ? (
+                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div>
+                        <div style={{ background: 'white', padding: '10px', borderRadius: '14px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', width: 'fit-content', marginBottom: '1rem' }}>
+                            <Icon size={24} color={color} />
+                        </div>
+                        <p style={{ margin: 0, fontSize: '0.95rem', color: '#64748b', fontWeight: 600 }}>{label}</p>
+                    </div>
+                    <div style={{ width: '100px', height: '100px' }}>
+                        {customContent}
+                    </div>
                 </div>
+            ) : (
+                <>
+                    <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '100%' }}>
+                        <div style={{ background: 'white', padding: '10px', borderRadius: '14px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', width: 'fit-content' }}>
+                            <Icon size={24} color={color} />
+                        </div>
+                        <div>
+                            <p style={{ margin: 0, fontSize: '0.95rem', color: '#64748b', fontWeight: 600 }}>{label}</p>
+                            <h3 style={{ margin: '4px 0 0 0', fontSize: '2.4rem', color: '#1e293b', fontWeight: 800, letterSpacing: '-1px' }}>{value}</h3>
+                        </div>
+                    </div>
+                    {trend && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(255,255,255,0.5)', padding: '4px 8px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 600, color: '#16a34a' }}>
+                            <TrendingUp size={14} /> {trend}
+                        </div>
+                    )}
+                </>
             )}
-        </div>
-
-        <div style={{ position: 'relative', zIndex: 1 }}>
-            <p style={{ margin: 0, fontSize: '0.95rem', color: '#64748b', fontWeight: 600 }}>{label}</p>
-            <h3 style={{ margin: '4px 0 0 0', fontSize: '2.4rem', color: '#1e293b', fontWeight: 800, letterSpacing: '-1px' }}>{value}</h3>
         </div>
     </div>
 );
@@ -52,54 +68,53 @@ const HeroStatCard = ({ label, value, icon: Icon, color, trend, gradient }) => (
 const OverviewSection = memo(({ barData }) => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', animation: 'fadeIn 0.6s ease-out' }}>
 
-        {/* --- HERO STATS ROW --- */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.5rem' }}>
+        {/* --- HERO STATS (FLOWCHART: OVERVIEW PANEL) --- */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.5rem' }}>
             <HeroStatCard
                 label="Total Students"
                 value={principalStats.totalStudents}
                 icon={Users}
                 color="#3b82f6"
-                trend="+5% vs last year"
+                trend="+5%"
                 gradient="linear-gradient(135deg, #eff6ff 0%, #ffffff 100%)"
             />
             <HeroStatCard
-                label="Placement Rate"
-                value={`${principalStats.placementRate}%`}
-                icon={GraduationCap}
-                color="#10b981"
-                trend="+12% increase"
-                gradient="linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%)"
+                label="Total Faculty"
+                value="42"
+                icon={Users}
+                color="#8b5cf6"
+                trend="Stable"
+                gradient="linear-gradient(135deg, #f5f3ff 0%, #ffffff 100%)"
             />
             <HeroStatCard
-                label="Avg Attendance"
-                value={`${principalStats.avgAttendance}%`}
-                icon={Activity}
+                label="Departments"
+                value="5"
+                icon={BookOpen}
                 color="#f59e0b"
-                trend="Stable"
+                trend="Active"
                 gradient="linear-gradient(135deg, #fffbeb 0%, #ffffff 100%)"
             />
             <HeroStatCard
-                label="Pending Approvals"
-                value="3"
-                icon={ShieldCheck}
-                color="#ef4444"
-                trend="Action Required"
-                gradient="linear-gradient(135deg, #fef2f2 0%, #ffffff 100%)"
+                label="IA Status"
+                icon={Activity}
+                color="#10b981"
+                gradient="linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%)"
+                customContent={<IAStatsWidget />}
             />
         </div>
 
         {/* --- MAIN CONTENT GRID (Asymmetrical) --- */}
         <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '2rem', alignItems: 'start' }}>
 
-            {/* LEFT COLUMN (Charts & Analytics) */}
+            {/* LEFT COLUMN (Student Performance & Faculty Monitoring) */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
 
-                {/* Academic Performance Chart */}
+                {/* Academic Performance Chart (FLOWCHART: STUDENT PERFORMANCE) */}
                 <div className={styles.glassCard} style={{ padding: '2rem', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.6)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                         <div>
-                            <h3 style={{ margin: 0, fontSize: '1.4rem', color: '#1e293b', fontWeight: 700 }}>Academic Performance</h3>
-                            <p style={{ margin: '0.5rem 0 0 0', color: '#64748b' }}>Department-wise average IA scores</p>
+                            <h3 style={{ margin: 0, fontSize: '1.4rem', color: '#1e293b', fontWeight: 700 }}>Department Performance</h3>
+                            <p style={{ margin: '0.5rem 0 0 0', color: '#64748b' }}>Average IA Scores Comparison</p>
                         </div>
                         <button className={styles.secondaryBtn} onClick={() => alert('Viewing Full Analysis')}>
                             View Details <ArrowUpRight size={16} />
@@ -138,22 +153,19 @@ const OverviewSection = memo(({ barData }) => (
                     </div>
                 </div>
 
-                {/* Trend Analysis */}
-                <YearComparisonWidget />
-
-                {/* Performance Widgets Row */}
+                {/* Trend & Faculty Rows (FLOWCHART: FACULTY MONITORING) */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
                     <FacultyPerformanceWidget />
                     <ScheduleWidget />
                 </div>
             </div>
 
-            {/* RIGHT COLUMN (Action & Focus) */}
+            {/* RIGHT COLUMN (Action Center & Approvals) */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
                 <ActionCenter />
+                {/* FLOWCHART: PENDING IA APPROVALS */}
+                <PendingApprovalsWidget />
                 <FocusListWidget />
-                <ConfidenceScoreWidget />
-                <NotesWidget />
             </div>
         </div>
 

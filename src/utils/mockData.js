@@ -23,7 +23,7 @@ export const hodData = {
 };
 
 export const subjectsByDept = {
-    'CS': ['Engineering Maths-II', 'English Communication', 'CAEG', 'Python'],
+    'CS': ['Engineering Maths-II', 'Communication Skills', 'CAEG', 'Python', 'Indian Constitution', 'IC'],
     'EE': ['Circuit Analysis', 'Transformers', 'Power Systems', 'Analog Electronics', 'Control Systems'],
     'ME': ['Thermodynamics', 'Fluid Mechanics', 'Machine Design', 'Heat Transfer', 'Manufacturing Process'],
     'CV': ['Surveying', 'Structural Analysis', 'Geotech Engg', 'Hydraulics', 'Concrete Tech'],
@@ -246,6 +246,20 @@ export const getStudentsByDept = (deptId) => {
     return students;
 };
 
+export const getMenteesForFaculty = (facultyId) => {
+    // Simulate assigning ~15 random students as mentees
+    const allStudents = studentsList;
+    // deterministically pick based on facultyId to be consistent but simple
+    const seed = facultyId.charCodeAt(facultyId.length - 1); // simple seed
+    const start = (seed % 5) * 10;
+    return allStudents.slice(start, start + 15).map(s => ({
+        ...s,
+        lastMeeting: '2023-10-10',
+        remarks: 'Improving',
+        parentPhone: '9876543210'
+    }));
+};
+
 // Initial calls to populate stats
 export const studentsList = getStudentsByDept('CS');
 
@@ -256,20 +270,81 @@ export const departmentStats = {
     atRiskCount: 3
 };
 
-export const facultyData = {
-    id: 'F001',
-    name: 'Dr. Suresh Kumar',
-    designation: 'Assistant Professor',
-    department: 'Computer Science & Engineering',
-    email: 'suresh.kumar@college.edu',
-    phone: '+91 98765 43210'
-};
+export const facultyProfiles = [
+    {
+        id: 'FAC001',
+        name: 'Miss Manju Sree',
+        designation: 'Lecturer',
+        department: 'Science/Maths',
+        email: 'manju.s@college.edu',
+        cabin: 'Sci-101'
+    },
+    {
+        id: 'FAC002',
+        name: 'Ramesh Gouda',
+        designation: 'Lecturer',
+        department: 'Mechanical',
+        email: 'ramesh.g@college.edu',
+        cabin: 'Mech-202'
+    },
+    {
+        id: 'FAC003',
+        name: 'Wahida Banu',
+        designation: 'Lecturer',
+        department: 'Computer Science',
+        email: 'wahida.b@college.edu',
+        cabin: 'CS-301'
+    },
+    {
+        id: 'FAC004',
+        name: 'Nasrin Banu',
+        designation: 'Lecturer',
+        department: 'English',
+        email: 'nasrin.b@college.edu',
+        cabin: 'Hum-105'
+    },
+    {
+        id: 'FAC005',
+        name: 'Sunil Babu H',
+        designation: 'Lecturer',
+        department: 'Computer Science',
+        email: 'sunil.b@college.edu',
+        cabin: 'CS-302'
+    },
+    {
+        id: 'FAC006',
+        name: 'Shreedar Singh',
+        designation: 'Lecturer',
+        department: 'Humanities',
+        email: 'shreedar.s@college.edu',
+        cabin: 'Hum-102'
+    }
+];
+
+// Default fallback for layout if not logged in (optional)
+export const facultyData = facultyProfiles[0];
 
 export const facultySubjects = [
-    { id: 'SUB001', name: 'Engineering Maths-II', code: '20SC01T', type: 'Theory', semester: '2nd', studentCount: 63, cie1MaxMarks: 35, cie2MaxMarks: 15, totalMaxMarks: 50 },
-    { id: 'SUB002', name: 'English Communication', code: '20EG01T', type: 'Theory', semester: '2nd', studentCount: 63, cie1MaxMarks: 50, cie2MaxMarks: 0, totalMaxMarks: 50 },
-    { id: 'SUB003', name: 'Python', code: '20CS21P', type: 'Lab', semester: '2nd', studentCount: 63, cie1MaxMarks: 25, cie2MaxMarks: 25, totalMaxMarks: 50 },
-    { id: 'SUB004', name: 'CAEG', code: '20ME02P', type: 'Lab', semester: '2nd', studentCount: 63, cie1MaxMarks: 10, cie2MaxMarks: 40, totalMaxMarks: 50 }
+    // Manju Sree
+    { id: 'SUB001', name: 'Engineering Maths-II', code: '20SC01T', type: 'Theory', semester: '2nd', studentCount: 63, cie1MaxMarks: 35, cie2MaxMarks: 15, totalMaxMarks: 50, instructorId: 'FAC001' },
+
+    // Nasrin Banu
+    { id: 'SUB002', name: 'Communication Skills', code: '20EG01T', type: 'Theory', semester: '2nd', studentCount: 63, cie1MaxMarks: 50, cie2MaxMarks: 0, totalMaxMarks: 50, instructorId: 'FAC004' },
+    { id: 'SUB002_B', name: 'CS', code: '20EG02P', type: 'Lab', semester: '2nd', studentCount: 63, cie1MaxMarks: 25, cie2MaxMarks: 25, totalMaxMarks: 50, instructorId: 'FAC004' },
+
+    // Wahida Banu
+    { id: 'SUB003', name: 'Python', code: '20CS21P', type: 'Lab', semester: '2nd', studentCount: 63, cie1MaxMarks: 25, cie2MaxMarks: 25, totalMaxMarks: 50, instructorId: 'FAC003' },
+    { id: 'SUB003_IC', name: 'IC', code: '20IC01T', type: 'Theory', semester: '2nd', studentCount: 63, cie1MaxMarks: 20, cie2MaxMarks: 20, totalMaxMarks: 50, instructorId: 'FAC003' },
+
+    // Ramesh Gouda
+    { id: 'SUB004', name: 'CAEG', code: '20ME02P', type: 'Lab', semester: '2nd', studentCount: 63, cie1MaxMarks: 10, cie2MaxMarks: 40, totalMaxMarks: 50, instructorId: 'FAC002' },
+
+    // Sunil Babu H
+    { id: 'SUB005', name: 'Python', code: '20CS21P-B', type: 'Lab', semester: '2nd', studentCount: 63, cie1MaxMarks: 25, cie2MaxMarks: 25, totalMaxMarks: 50, instructorId: 'FAC005' },
+
+    // Shreedar Singh
+    { id: 'SUB006', name: 'Indian Constitution', code: '20IC01T-B', type: 'Theory', semester: '2nd', studentCount: 63, cie1MaxMarks: 20, cie2MaxMarks: 20, totalMaxMarks: 50, instructorId: 'FAC006' },
+    { id: 'SUB007', name: 'IC', code: '20IC01T', type: 'Theory', semester: '2nd', studentCount: 63, cie1MaxMarks: 20, cie2MaxMarks: 20, totalMaxMarks: 50, instructorId: 'FAC006' }
 ];
 
 export const facultyClassAnalytics = {
@@ -282,9 +357,9 @@ export const facultyClassAnalytics = {
 };
 
 export const labSchedule = [
-    { id: 1, day: 'Monday', time: '2:00 PM - 5:00 PM', lab: 'Web Tech Lab', batch: 'B1' },
-    { id: 2, day: 'Wednesday', time: '9:00 AM - 12:00 PM', lab: 'Java Lab', batch: 'B2' },
-    { id: 3, day: 'Friday', time: '10:00 AM - 1:00 PM', lab: 'Software Engg Lab', batch: 'B1' }
+    { id: 1, day: 'Monday', time: '2:00 PM - 5:00 PM', lab: 'Python Prog. Lab', batch: 'B1' },
+    { id: 2, day: 'Wednesday', time: '9:00 AM - 12:00 PM', lab: 'CAEG Lab', batch: 'B2' },
+    { id: 3, day: 'Friday', time: '10:00 AM - 1:00 PM', lab: 'Comm. Skills Lab', batch: 'B1' }
 ];
 
 export const recentActivities = [
@@ -346,9 +421,12 @@ export const hodGradeDistribution = {
 };
 
 export const facultyWorkload = [
-    { id: 1, name: 'Dr. Suresh', classes: 12, labs: 4 },
-    { id: 2, name: 'Prof. Anjali', classes: 10, labs: 6 },
-    { id: 3, name: 'Prof. Vikram', classes: 14, labs: 2 }
+    { id: 1, name: 'Miss Manju Sree', classes: 12, labs: 4 },
+    { id: 2, name: 'Nasrin Banu', classes: 10, labs: 6 },
+    { id: 3, name: 'Wahida Banu', classes: 11, labs: 5 },
+    { id: 4, name: 'Ramesh Gouda', classes: 8, labs: 8 },
+    { id: 5, name: 'Sunil Babu H', classes: 9, labs: 7 },
+    { id: 6, name: 'Shreedar Singh', classes: 14, labs: 2 }
 ];
 
 export const branchPerformanceData = {
@@ -367,7 +445,7 @@ export const iaSubmissionStatus = {
 
 export const collegeStats = {
     passFailData: [850, 150], // Passed, Failed count
-    branches: ['CS', 'EC', 'ME', 'CV', 'EE'],
+    branches: ['CS', 'MT', 'ME', 'CV', 'EE'],
     branchPerformance: [78, 72, 68, 74, 70] // Average percentages
 };
 

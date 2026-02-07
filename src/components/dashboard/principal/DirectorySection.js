@@ -1,5 +1,5 @@
 import React, { useState, useMemo, memo } from 'react';
-import { X } from 'lucide-react';
+import { X, Search, Filter, Download, AlertTriangle, CheckCircle, Clock, ArrowLeft } from 'lucide-react';
 import styles from '../../../pages/PrincipalDashboard.module.css';
 import { departments } from '../../../utils/mockData';
 
@@ -82,38 +82,39 @@ export const DirectorySection = memo(({ selectedDept, deptStudents, handleDeptCl
     const [semester, setSemester] = useState('2nd');
     const [section, setSection] = useState('A');
     const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = 10;
-
-    // Local state for modal to keep it self-contained or use prop if lifting state is needed
-    // The prop is passed, so we use it. But we also need to render the modal here or in parent.
-    // The original code passed `setSelectedStudentProfile` up.
-    // We can keep rendering the modal in the parent or move it here. 
-    // Moving it here is cleaner for "Section" encapsulation, 
-    // but the original `PrincipalDashboard` had it at root level (better for z-index/overlay).
-    // Let's keep the modal render in this component for simplicity of refactor,
-    // assuming valid z-index context. 
-    // Actually, `deptStudents` is passed from parent. `selectedStudentProfile` was state in parent.
-    // We can use local state for the modal if we want to fully encapsulate. 
-    // But `PrincipalDashboard` had `selectedStudentProfile` state.
-    // Let's use the prop for setting, but we might need the object. 
-    // The parent passed `setSelectedStudentProfile`. It did NOT pass `selectedStudentProfile` object to THIS component 
-    // in the original code (it rendered Modal outside).
-    // Let's change this: `DirectorySection` now handles the modal internally to reduce parent complexity.
+    const [searchQuery, setSearchQuery] = useState('');
+    const [showAtRisk, setShowAtRisk] = useState(false);
+    const [selectedStudents, setSelectedStudents] = useState([]);
+    const itemsPerPage = 100; // Show all students
 
     const [internalSelectedStudent, setInternalSelectedStudent] = useState(null);
 
     const handleViewProfile = (student) => {
         if (propSetSelectedStudentProfile) {
-            propSetSelectedStudentProfile(student); // If parent wants to know
+            propSetSelectedStudentProfile(student);
         }
         setInternalSelectedStudent(student);
     };
 
-    // Helper to generate random students - Memoized to prevent regeneration on every render
+    const handleSelectStudent = (id) => {
+        setSelectedStudents(prev =>
+            prev.includes(id) ? prev.filter(sid => sid !== id) : [...prev, id]
+        );
+    };
+
+    const handleSelectAll = (e) => {
+        if (e.target.checked) {
+            setSelectedStudents(paginatedStudents.map(s => s.id));
+        } else {
+            setSelectedStudents([]);
+        }
+    };
+
+    // Helper to generate random students with REALISTIC EXTENSIONS
     const randomStudents = useMemo(() => {
         if (semester === '2nd') return [];
 
-        const count = 60;
+        const count = 63;
         const firstNames = ['Aarav', 'Vivaan', 'Aditya', 'Vihaan', 'Arjun', 'Sai', 'Reyansh', 'Ayan', 'Krishna', 'Ishaan', 'Shaurya', 'Atharv', 'Neerav', 'Rohan', 'Aryan', 'Dhruv', 'Kabir', 'Riyan', 'Ananya', 'Diya', 'Sana', 'Aaradhya', 'Kiara', 'Pari', 'Anika', 'Myra', 'Riya', 'Anya', 'Ahana', 'Kyra'];
         const lastNames = ['Sharma', 'Verma', 'Gupta', 'Malhotra', 'Bhat', 'Saxena', 'Mehta', 'Joshi', 'Singh', 'Kumar', 'Reddy', 'Patel', 'Das', 'Roy', 'Nair', 'Rao', 'Iyer', 'Menon', 'Gowda', 'Shetty'];
 
@@ -127,21 +128,30 @@ export const DirectorySection = memo(({ selectedDept, deptStudents, handleDeptCl
             marks: {
                 ia1: Math.floor(Math.random() * 20),
                 ia2: Math.floor(Math.random() * 20)
-            }
+            },
+            feesStatus: Math.random() > 0.15 ? 'Paid' : 'Pending',
+            mentoringStatus: Math.random() > 0.3 ? 'Done' : 'Pending',
         }));
     }, [semester, section]);
 
-    // Derived State: Filtered Students - Memoized
+    // Derived State: Filtered Students
     const filteredStudents = useMemo(() => {
-        // Reset page on filter change
         setCurrentPage(1);
-        if (semester === '2nd') {
-            // Strict filtering for 2nd semester real/mock data
-            return deptStudents.filter(s => s.section === section);
-        } else {
-            return randomStudents;
-        }
-    }, [semester, section, deptStudents, randomStudents]);
+        let baseList = semester === '2nd' ? deptStudents.filter(s => s.section === section) : randomStudents;
+
+        // Ensure real data also has the extra fields if missing
+        baseList = baseList.map(s => ({
+            ...s,
+            feesStatus: s.feesStatus || (Math.random() > 0.15 ? 'Paid' : 'Pending'),
+            mentoringStatus: s.mentoringStatus || (Math.random() > 0.3 ? 'Done' : 'Pending')
+        }));
+
+        return baseList.filter(s => {
+            const matchesSearch = s.name.toLowerCase().includes(searchQuery.toLowerCase()) || s.rollNo.includes(searchQuery);
+            const isAtRisk = showAtRisk ? (s.attendance < 75 || ((s.marks.ia1 + s.marks.ia2) / 40) < 0.5) : true;
+            return matchesSearch && isAtRisk;
+        });
+    }, [semester, section, deptStudents, randomStudents, searchQuery, showAtRisk]);
 
     // Pagination Logic
     const paginatedStudents = useMemo(() => {
@@ -189,63 +199,174 @@ export const DirectorySection = memo(({ selectedDept, deptStudents, handleDeptCl
 
     return (
         <div className={styles.sectionVisible}>
-            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1.5rem', gap: '1rem', flexWrap: 'wrap' }}>
+            {/* --- NEW COLORFUL HEADER BANNER --- */}
+            <div style={{
+                background: 'linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%)',
+                borderRadius: '24px',
+                padding: '2rem',
+                color: 'white',
+                marginBottom: '2rem',
+                position: 'relative',
+                overflow: 'hidden',
+                boxShadow: '0 10px 25px -5px rgba(59, 130, 246, 0.5)'
+            }}>
+                <div style={{ position: 'absolute', top: '-50px', right: '-50px', width: '200px', height: '200px', background: 'rgba(255,255,255,0.1)', borderRadius: '50%' }}></div>
+                <div style={{ position: 'absolute', bottom: '-20px', left: '100px', width: '100px', height: '100px', background: 'rgba(255,255,255,0.1)', borderRadius: '50%' }}></div>
+
                 <button
                     onClick={() => setSelectedDept(null)}
-                    style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center' }}
-                >← Back</button>
+                    style={{
+                        background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(4px)', border: '1px solid rgba(255,255,255,0.3)',
+                        borderRadius: '12px', padding: '0.5rem 1rem', color: 'white', fontSize: '0.9rem',
+                        cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '1.5rem',
+                        fontWeight: 500, transition: 'background 0.2s'
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.3)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
+                >
+                    <ArrowLeft size={16} /> Back to Departments
+                </button>
 
-                <div style={{ marginRight: 'auto' }}>
-                    <h3 className={styles.chartTitle} style={{ marginBottom: 0 }}>{selectedDept.name} Students</h3>
-                    <p style={{ color: '#64748b', margin: 0 }}>Total Records: {filteredStudents.length}</p>
-                </div>
-
-                <div style={{ display: 'flex', gap: '1rem' }}>
-                    <select
-                        value={semester}
-                        onChange={(e) => setSemester(e.target.value)}
-                        style={{ padding: '0.5rem', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none' }}
-                    >
-                        {['1st', '2nd', '3rd', '4th', '5th'].map(sem => (
-                            <option key={sem} value={sem}>{sem} Semester</option>
-                        ))}
-                    </select>
-
-                    <select
-                        value={section}
-                        onChange={(e) => setSection(e.target.value)}
-                        style={{ padding: '0.5rem', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none' }}
-                    >
-                        <option value="A">Section A</option>
-                        <option value="B">Section B</option>
-                    </select>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', position: 'relative', zIndex: 1 }}>
+                    <div>
+                        <h1 style={{ margin: 0, fontSize: '2.4rem', fontWeight: 800, letterSpacing: '-1px' }}>{selectedDept.name}</h1>
+                        <p style={{ margin: '0.5rem 0 0 0', opacity: 0.9, fontSize: '1.1rem' }}>Student Directory & Performance</p>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+                        <div style={{ textAlign: 'right' }}>
+                            <p style={{ margin: 0, fontSize: '0.9rem', opacity: 0.8 }}>Total Students</p>
+                            <p style={{ margin: 0, fontSize: '2rem', fontWeight: 700 }}>{filteredStudents.length}</p>
+                        </div>
+                        <div style={{ width: '1px', height: '40px', background: 'rgba(255,255,255,0.3)' }}></div>
+                        <div style={{ textAlign: 'right' }}>
+                            <p style={{ margin: 0, fontSize: '0.9rem', opacity: 0.8 }}>Avg Attendance</p>
+                            <p style={{ margin: 0, fontSize: '2rem', fontWeight: 700 }}>86%</p>
+                        </div>
+                    </div>
                 </div>
             </div>
+
+            {/* --- ACTION TOOLBAR --- */}
+            <div style={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem',
+                background: 'white', padding: '1rem', borderRadius: '16px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)',
+                border: '1px solid #e2e8f0', flexWrap: 'wrap', gap: '1rem'
+            }}>
+                <div style={{ display: 'flex', gap: '1rem', flex: 1 }}>
+                    <div style={{ position: 'relative', width: '100%', maxWidth: '300px' }}>
+                        <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                        <input
+                            placeholder="Search by Name or Reg No..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            style={{
+                                padding: '0.7rem 0.7rem 0.7rem 2.5rem', borderRadius: '10px',
+                                border: '1px solid #e2e8f0', outline: 'none', width: '100%', fontSize: '0.95rem',
+                                background: '#f8fafc'
+                            }}
+                        />
+                    </div>
+
+                    <button
+                        onClick={() => setShowAtRisk(!showAtRisk)}
+                        style={{
+                            padding: '0.5rem 1rem', borderRadius: '10px', border: showAtRisk ? '1px solid #ef4444' : '1px solid #e2e8f0',
+                            background: showAtRisk ? '#fef2f2' : 'white', color: showAtRisk ? '#ef4444' : '#64748b',
+                            display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', cursor: 'pointer', fontWeight: 600,
+                            transition: 'all 0.2s'
+                        }}
+                    >
+                        <AlertTriangle size={16} /> {showAtRisk ? 'Showing At-Risk' : 'At-Risk Only'}
+                    </button>
+                </div>
+
+                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#f1f5f9', padding: '4px', borderRadius: '10px' }}>
+                        <select
+                            value={semester}
+                            onChange={(e) => setSemester(e.target.value)}
+                            style={{ padding: '0.5rem 1rem', borderRadius: '8px', border: 'none', outline: 'none', background: 'white', fontSize: '0.9rem', fontWeight: 500, boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}
+                        >
+                            {['1st', '2nd', '3rd', '4th', '5th'].map(sem => (
+                                <option key={sem} value={sem}>{sem} Sem</option>
+                            ))}
+                        </select>
+
+                        <select
+                            value={section}
+                            onChange={(e) => setSection(e.target.value)}
+                            style={{ padding: '0.5rem 1rem', borderRadius: '8px', border: 'none', outline: 'none', background: 'white', fontSize: '0.9rem', fontWeight: 500, boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}
+                        >
+                            <option value="A">Section A</option>
+                            <option value="B">Section B</option>
+                        </select>
+                    </div>
+
+                    <button
+                        style={{
+                            padding: '0.7rem 1rem', borderRadius: '10px', border: '1px solid #e2e8f0',
+                            background: 'white', color: '#0f172a',
+                            display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', cursor: 'pointer', fontWeight: 600
+                        }}
+                        onClick={() => alert(`Exporting ${filteredStudents.length} records to Excel...`)}
+                    >
+                        <Download size={16} /> Export
+                    </button>
+                </div>
+            </div>
+
+            {/* --- BULK ACTIONS BAR --- */}
+            {selectedStudents.length > 0 && (
+                <div style={{
+                    background: '#0f172a', color: 'white', padding: '0.75rem 1.5rem', borderRadius: '12px',
+                    marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', animation: 'fadeIn 0.2s',
+                    boxShadow: '0 10px 25px -5px rgba(15, 23, 42, 0.3)'
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <CheckCircle size={20} color="#4ade80" />
+                        <span style={{ fontWeight: 600 }}>{selectedStudents.length} students selected</span>
+                    </div>
+                    <div style={{ display: 'flex', gap: '1rem' }}>
+                        <button style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', padding: '6px 12px', borderRadius: '6px', fontWeight: 500, cursor: 'pointer' }} onClick={() => alert("Sending SMS to selected parents...")}>Send SMS</button>
+                        <button style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', padding: '6px 12px', borderRadius: '6px', fontWeight: 500, cursor: 'pointer' }} onClick={() => alert("Printing Reports...")}>Print Reports</button>
+                        <button style={{ background: 'white', border: 'none', color: '#0f172a', padding: '6px 12px', borderRadius: '6px', fontWeight: 600, cursor: 'pointer' }} onClick={() => setSelectedStudents([])}>Clear</button>
+                    </div>
+                </div>
+            )}
 
             <div className={styles.tableCard}>
                 <table className={styles.table}>
                     <thead>
                         <tr>
+                            <th style={{ width: '40px' }}><input type="checkbox" onChange={handleSelectAll} checked={selectedStudents.length === paginatedStudents.length && paginatedStudents.length > 0} /></th>
+                            <th style={{ width: '60px' }}>Sl. No</th>
                             <th>Reg No</th>
                             <th>Name</th>
                             <th>Sem</th>
-                            <th>Section</th>
                             <th>Attendance</th>
                             <th>IA Performance</th>
+                            <th>Fees Status</th>
+                            <th>Mentoring</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {paginatedStudents.length > 0 ? (
-                            paginatedStudents.map(student => (
-                                <tr key={student.id} onClick={() => handleViewProfile(student)} style={{ cursor: 'pointer' }}>
+                            paginatedStudents.map((student, index) => (
+                                <tr key={student.id} onClick={() => handleViewProfile(student)} style={{ cursor: 'pointer', background: selectedStudents.includes(student.id) ? '#f0f9ff' : 'transparent' }}>
+                                    <td onClick={(e) => e.stopPropagation()}>
+                                        <input type="checkbox" checked={selectedStudents.includes(student.id)} onChange={() => handleSelectStudent(student.id)} />
+                                    </td>
+                                    <td style={{ color: '#64748b', fontWeight: 500 }}>{(currentPage - 1) * itemsPerPage + index + 1}</td>
                                     <td>{student.rollNo}</td>
-                                    <td style={{ fontWeight: 600 }}>{student.name}</td>
+                                    <td style={{ fontWeight: 600 }}>
+                                        {student.name}
+                                        {student.attendance < 75 && <span style={{ display: 'inline-block', width: '6px', height: '6px', background: '#ef4444', borderRadius: '50%', marginLeft: '6px', verticalAlign: 'middle' }}></span>}
+                                    </td>
                                     <td>{student.sem}</td>
-                                    <td>{student.section}</td>
                                     <td>
                                         <span style={{
-                                            padding: '4px 8px', borderRadius: '12px', fontSize: '0.85rem',
+                                            padding: '4px 8px', borderRadius: '12px', fontSize: '0.85rem', fontWeight: 600,
                                             background: student.attendance >= 75 ? '#dcfce7' : '#fee2e2',
                                             color: student.attendance >= 75 ? '#166534' : '#991b1b'
                                         }}>
@@ -253,16 +374,37 @@ export const DirectorySection = memo(({ selectedDept, deptStudents, handleDeptCl
                                         </span>
                                     </td>
                                     <td>
-                                        <div style={{ width: '100px', height: '6px', background: '#e2e8f0', borderRadius: '3px', overflow: 'hidden' }}>
-                                            <div style={{
-                                                width: `${(student.marks.ia1 + student.marks.ia2) / 40 * 100}%`,
-                                                height: '100%',
-                                                background: '#3b82f6'
-                                            }}></div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <div style={{ width: '80px', height: '6px', background: '#e2e8f0', borderRadius: '3px', overflow: 'hidden' }}>
+                                                <div style={{
+                                                    width: `${(student.marks.ia1 + student.marks.ia2) / 40 * 100}%`,
+                                                    height: '100%',
+                                                    background: ((student.marks.ia1 + student.marks.ia2) / 40) >= 0.5 ? '#3b82f6' : '#f59e0b'
+                                                }}></div>
+                                            </div>
+                                            <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{Math.round((student.marks.ia1 + student.marks.ia2) / 40 * 100)}%</span>
                                         </div>
                                     </td>
                                     <td>
-                                        <button className={styles.secondaryBtn} onClick={(e) => { e.stopPropagation(); handleViewProfile(student); }}>
+                                        {student.feesStatus === 'Paid' ? (
+                                            <span style={{ color: '#16a34a', fontWeight: 600, fontSize: '0.85rem' }}>Paid</span>
+                                        ) : (
+                                            <span style={{ color: '#ea580c', fontWeight: 600, fontSize: '0.85rem', background: '#ffedd5', padding: '2px 8px', borderRadius: '8px' }}>Pending</span>
+                                        )}
+                                    </td>
+                                    <td>
+                                        {student.mentoringStatus === 'Done' ? (
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#64748b', fontSize: '0.85rem' }}>
+                                                <CheckCircle size={14} color="#10b981" /> Done
+                                            </div>
+                                        ) : (
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#f59e0b', fontSize: '0.85rem', fontWeight: 500 }}>
+                                                <Clock size={14} /> Pending
+                                            </div>
+                                        )}
+                                    </td>
+                                    <td>
+                                        <button className={styles.secondaryBtn} onClick={(e) => { e.stopPropagation(); handleViewProfile(student); }} style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}>
                                             View Profile
                                         </button>
                                     </td>
@@ -270,38 +412,27 @@ export const DirectorySection = memo(({ selectedDept, deptStudents, handleDeptCl
                             ))
                         ) : (
                             <tr>
-                                <td colSpan="7" style={{ textAlign: 'center', padding: '2rem', color: '#64748b' }}>
-                                    No students found for {semester} Sem - Section {section}
+                                <td colSpan="9" style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+                                        <Search size={32} color="#cbd5e1" />
+                                        <p style={{ margin: 0 }}>No students found matching your filters.</p>
+                                        <button
+                                            onClick={() => { setSearchQuery(''); setShowAtRisk(false); }}
+                                            style={{ color: '#3b82f6', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}
+                                        >
+                                            Clear Filters
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         )}
                     </tbody>
                 </table>
 
-                {/* Pagination Controls */}
-                {totalPages > 1 && (
-                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1rem', marginTop: '1.5rem' }}>
-                        <button
-                            className={styles.secondaryBtn}
-                            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                            disabled={currentPage === 1}
-                            style={{ opacity: currentPage === 1 ? 0.5 : 1, cursor: currentPage === 1 ? 'not-allowed' : 'pointer' }}
-                        >
-                            Previous
-                        </button>
-                        <span style={{ color: '#64748b', fontWeight: 600 }}>
-                            Page {currentPage} of {totalPages}
-                        </span>
-                        <button
-                            className={styles.secondaryBtn}
-                            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                            disabled={currentPage === totalPages}
-                            style={{ opacity: currentPage === totalPages ? 0.5 : 1, cursor: currentPage === totalPages ? 'not-allowed' : 'pointer' }}
-                        >
-                            Next
-                        </button>
-                    </div>
-                )}
+                {/* Footer showing count */}
+                <div style={{ textAlign: 'center', padding: '1.5rem', color: '#64748b', fontSize: '0.9rem' }}>
+                    Showing all {filteredStudents.length} students
+                </div>
             </div>
 
             <StudentProfileModal

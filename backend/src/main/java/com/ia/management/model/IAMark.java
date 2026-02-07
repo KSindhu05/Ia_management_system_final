@@ -34,7 +34,14 @@ public class IAMark {
     private Integer attendancePercentage;
     private String remarks;
 
+    @Enumerated(EnumType.STRING)
+    private MarkStatus status = MarkStatus.PENDING;
+
     public enum IAType {
-        IA1, IA2, IA3
+        CIE1, CIE2, CIE3, CIE4, CIE5
+    }
+
+    public enum MarkStatus {
+        PENDING, SUBMITTED, APPROVED, REJECTED
     }
 }

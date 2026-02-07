@@ -1,18 +1,15 @@
 import React, { useState } from 'react';
 import DashboardLayout from '../components/DashboardLayout';
-import { LayoutDashboard, FileText, Calendar, Book, User, Download, Upload, Bell, TrendingUp, Award, Clock, CheckCircle, Mail, MapPin, Filter, ChevronDown } from 'lucide-react';
+import { LayoutDashboard, FileText, Calendar, Book, User, Download, Bell, TrendingUp, Award, Clock, CheckCircle, Mail, MapPin, ChevronDown, BookOpen } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 import styles from './StudentDashboard.module.css';
 
 // --- DATA DEFINITIONS ---
 
-const studentInfo = {
-    name: 'A KAVITHA',
-    rollNo: '459CS25001',
-    branch: 'Computer Science',
-    semester: '2nd',
-    attendance: 87,
-    cgpa: 9.0,
-};
+// --- DATA DEFINITIONS ---
+
+// studentInfo moved to component state
+
 
 // --- SOPHISTICATED MOCK DATA FOR CIE MARKS (SEM 1-6) ---
 const semesterData = {
@@ -31,14 +28,17 @@ const semesterData = {
     },
     2: {
         theory: [
-            { code: '20CS21T', subject: 'Engg Mathematics-II', ia1: 16, ia2: 18, ia3: 19, assignment: 9, total: 43 },
-            { code: '20CS22T', subject: 'English Comm', ia1: 19, ia2: 20, ia3: 20, assignment: 10, total: 49 },
-            { code: '20CS23T', subject: 'Digital Electronics', ia1: 14, ia2: 15, ia3: 13, assignment: 8, total: 39 },
-            { code: '20CS24T', subject: 'C Programming', ia1: 20, ia2: 20, ia3: 20, assignment: 10, total: 50 },
+            { code: '25SC21I', subject: 'Engg Mathematics-II', ia1: 16, ia2: 18, ia3: 19, assignment: 9, total: 43 },
+            { code: '25ME02I', subject: 'CAEG', ia1: 19, ia2: 20, ia3: 20, assignment: 10, total: 49 },
+            { code: '25CS21I', subject: 'Python', ia1: 14, ia2: 15, ia3: 13, assignment: 8, total: 39 },
+            { code: '25EG01I', subject: 'Communication Skills ', ia1: 20, ia2: 20, ia3: 20, assignment: 10, total: 50 },
+            { code: '25CS22T', subject: 'Indian Constitution (IC) ', ia1: 20, ia2: 19, ia3: 18, assignment: 10, total: 50 },
         ],
         labs: [
-            { code: '20CS26P', subject: 'Multimedia Lab', skill1: 23, skill2: 24, record: 9, total: 56 },
-            { code: '20CS27P', subject: 'C Programming Lab', skill1: 25, skill2: 25, record: 10, total: 60 },
+            { code: '25CS26P', subject: 'Engg Mathematics-II Lab', skill1: 23, skill2: 24, record: 9, total: 56 },
+            { code: '25CS27P', subject: 'CAEG Lab', skill1: 25, skill2: 22, record: 10, total: 60 },
+            { code: '25CS27P', subject: 'Python Lab', skill1: 23, skill2: 21, record: 10, total: 60 },
+            { code: '25CS27P', subject: 'Communication Skills Lab', skill1: 15, skill2: 25, record: 10, total: 60 },
         ]
     },
     3: {
@@ -95,9 +95,9 @@ const upcomingExams = [
 ];
 
 const notifications = [
-    { id: 1, message: 'New CIE-5 Marks Uploaded for CAD', time: '2 hrs ago', type: 'info' },
+    { id: 1, message: 'New CIE-2 Marks Uploaded for CAD', time: '2 hrs ago', type: 'info' },
     { id: 2, message: 'Parent Meeting Scheduled for 20th Dec', time: '1 day ago', type: 'warning' },
-    { id: 3, message: 'CIE-6 Submission Deadline Tomorrow', time: '2 days ago', type: 'alert' },
+    { id: 3, message: 'CIE-3 Submission Deadline Tomorrow', time: '2 days ago', type: 'alert' },
 ];
 
 const attendanceData = [
@@ -131,49 +131,192 @@ const StudentDashboard = () => {
     const [activeSection, setActiveSection] = useState('Overview');
     const [toast, setToast] = useState({ show: false, message: '' });
 
+    const { user } = useAuth(); // Get auth context
+
     // API State
     const [realMarks, setRealMarks] = useState([]);
     const [realSubjects, setRealSubjects] = useState([]);
+    const [cieStatus, setCieStatus] = useState("0/3");
+
+    // IA & Notification State
+    const [upcomingExams, setUpcomingExams] = useState([]);
+    const [notifications, setNotifications] = useState([]);
+    const [loadingAnnouncements, setLoadingAnnouncements] = useState(true);
+
+    // Student Profile State
+    const [studentInfo, setStudentInfo] = useState({
+        name: 'Loading...',
+        rollNo: user?.username || '...',
+        branch: '...',
+        semester: '...',
+        attendance: 0,
+        cgpa: 0
+    });
 
     React.useEffect(() => {
-        // Fallback to Mock Data - align with User's Sheet
-        const currentSemSubjects = [
-            { name: 'Engineering Maths-II', code: '25SC01T', cie1: 19, cie2: 17 },
-            { name: 'CS (Communication Skills)', code: '25EG01T', cie1: 15, cie2: 42 },
-            { name: 'Python', code: '25CS21P', cie1: 22, cie2: 24 },
-            { name: 'CAEG', code: '25ME02P', cie1: 7, cie2: 18 },
-            { name: 'Indian Constitution', code: '25IC01T', cie1: 18, cie2: 19 }
-        ];
+        const fetchMarks = async () => {
+            try {
+                // Return if no user/token
+                if (!user || !user.token) return;
 
-        const mockRealSubjects = currentSemSubjects.map((s, i) => {
-            let cie1Max = 35, cie2Max = 15, totalMax = 50;
-            if (s.name === 'English Communication') { cie1Max = 50; cie2Max = 0; }
-            else if (s.name === 'CAEG') { cie1Max = 8; cie2Max = 22; totalMax = 30; }
-            else if (s.name === 'Python') { cie1Max = 25; cie2Max = 25; }
+                const response = await fetch('http://127.0.0.1:8083/api/marks/my-marks', {
+                    headers: {
+                        'Authorization': `Bearer ${user.token}`
+                    }
+                });
 
-            return {
-                id: i + 1,
-                name: s.name,
-                code: s.code,
-                cie1MaxMarks: cie1Max,
-                cie2MaxMarks: cie2Max,
-                totalMaxMarks: totalMax,
-                department: 'CS'
-            };
-        });
-        setRealSubjects(mockRealSubjects);
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log("Fetched Marks:", data);
+                    setRealMarks(data);
 
-        const mockRealMarks = currentSemSubjects.map((s, i) => ({
-            subject: { id: i + 1 },
-            student: { id: 'me' },
-            iaType: 'CIE1',
-            cie1Score: s.cie1,
-            cie2Score: s.cie2,
-            totalScore: s.cie1 + s.cie2,
-            attendancePercentage: Math.floor(Math.random() * 15) + 80
-        }));
-        setRealMarks(mockRealMarks);
-    }, []);
+                    if (data.length > 0) {
+                        const s = data[0].student;
+                        setStudentInfo({
+                            name: s.name,
+                            rollNo: s.regNo,
+                            branch: s.department,
+                            semester: s.semester,
+                            attendance: 85,
+                            cgpa: 8.5
+                        });
+                    }
+
+                    // Group marks by subject
+                    const groupedMarks = {};
+
+                    data.forEach(mark => {
+                        const subId = mark.subject.id;
+                        if (!groupedMarks[subId]) {
+                            groupedMarks[subId] = {
+                                subject: mark.subject,
+                                cie1Score: null,
+                                cie2Score: null,
+                                totalScore: 0,
+                                attendance: 0,
+                                count: 0
+                            };
+                        }
+
+                        if (mark.iaType === 'CIE1') {
+                            groupedMarks[subId].cie1Score = mark.totalScore;
+                        } else if (mark.iaType === 'CIE2') {
+                            groupedMarks[subId].cie2Score = mark.totalScore;
+                        } else if (mark.iaType === 'CIE3') {
+                            groupedMarks[subId].cie3Score = mark.totalScore;
+                        } else if (mark.iaType === 'CIE4') {
+                            groupedMarks[subId].cie4Score = mark.totalScore;
+                        } else if (mark.iaType === 'CIE5') {
+                            groupedMarks[subId].cie5Score = mark.totalScore;
+                        }
+
+                        // For Overview Total, let's take average of available marks for now, or just sum?
+                        // User's expectation: Best of? Or Avg? Or just latest?
+                        // For 2nd sem, usually Avg of Best 2. 
+                        // Let's just store them. The render function logic is separate.
+                        groupedMarks[subId].attendance += (mark.attendancePercentage || 0);
+                        groupedMarks[subId].count++;
+                    });
+
+                    // Calculate totals (Average of (CIE1 + CIE2)) or similar logic
+                    Object.values(groupedMarks).forEach(item => {
+                        let sum = 0;
+                        let c = 0;
+                        if (item.cie1Score != null) { sum += item.cie1Score; c++; }
+                        if (item.cie2Score != null) { sum += item.cie2Score; c++; }
+
+                        // Simple Average for "Total" display column if both exist, else just the value
+                        // Note: This logic depends on college policy (Best of 2, Avg of 2, etc.)
+                        // For display simplicity:
+                        item.totalScore = sum;
+                    });
+
+                    setRealMarks(Object.values(groupedMarks));
+
+                    // Extract unique subjects from the marks
+                    const subjects = Object.values(groupedMarks).map(g => ({
+                        id: g.subject.id,
+                        name: g.subject.name,
+                        code: g.subject.code,
+                        cie1MaxMarks: g.subject.maxMarks,
+                        cie2MaxMarks: g.subject.maxMarks,
+                        cie3MaxMarks: g.subject.maxMarks,
+                        cie4MaxMarks: g.subject.maxMarks,
+                        cie5MaxMarks: g.subject.maxMarks,
+                        totalMaxMarks: g.subject.maxMarks,
+                        department: g.subject.department
+                    }));
+
+                    setRealSubjects(subjects);
+
+                    // Calculate CIEs Completed
+                    const uniqueCIEs = new Set(data.map(m => m.iaType));
+                    const completedCount = uniqueCIEs.size;
+                    // Assuming total 3 CIEs for now based on user context
+                    setCieStatus(`${completedCount}/3`);
+
+                } else {
+                    console.error("Failed to fetch marks");
+                }
+            } catch (error) {
+                console.error("Error fetching marks:", error);
+            }
+        };
+
+        fetchMarks();
+        fetchMarks();
+
+        // Fetch Announcements & Notifications
+        const fetchUpdates = async () => {
+            if (!user || !user.token) return;
+
+            try {
+                // Announcements
+                const annRes = await fetch('http://127.0.0.1:8083/api/student/announcements', {
+                    headers: { 'Authorization': `Bearer ${user.token}` }
+                });
+                if (annRes.ok) {
+                    const anns = await annRes.json();
+                    setUpcomingExams(anns.map(a => ({
+                        id: a.id,
+                        exam: `CIE-${a.cieNumber}`,
+                        subject: a.subject?.name || 'Subject',
+                        date: a.scheduledDate,
+                        time: a.startTime ? a.startTime.substring(0, 5) : 'TBD',
+                        duration: a.durationMinutes + ' mins',
+                        room: a.examRoom || 'TBD',
+                        instructions: a.instructions
+                    })));
+                }
+
+                // Notifications
+                const notifRes = await fetch('http://127.0.0.1:8083/api/student/notifications', {
+                    headers: { 'Authorization': `Bearer ${user.token}` }
+                });
+                if (notifRes.ok) {
+                    const notifs = await notifRes.json();
+                    setNotifications(notifs.map(n => ({
+                        id: n.id,
+                        message: n.message,
+                        time: new Date(n.createdAt).toLocaleDateString(), // Format nicer
+                        type: n.type === 'IA_ANNOUNCEMENT' ? 'info' : 'alert',
+                        isRead: n.isRead
+                    })));
+                } else {
+                    // Fallback to mock notifications if API fails or empty
+                    setNotifications([
+                        { id: 1, message: 'Welcome to the new IA System!', time: 'Just now', type: 'info', isRead: false }
+                    ]);
+                }
+            } catch (e) {
+                console.error("Error fetching updates:", e);
+            } finally {
+                setLoadingAnnouncements(false);
+            }
+        };
+
+        fetchUpdates();
+    }, [user]);
 
     // Filter States
     const [selectedSemester, setSelectedSemester] = useState('5');
@@ -185,6 +328,7 @@ const StudentDashboard = () => {
         { label: 'Attendance', path: '/dashboard/student', icon: <Calendar size={20} />, isActive: activeSection === 'Attendance', onClick: () => setActiveSection('Attendance') },
         { label: 'Subjects', path: '/dashboard/student', icon: <Book size={20} />, isActive: activeSection === 'Subjects', onClick: () => setActiveSection('Subjects') },
         { label: 'Faculty', path: '/dashboard/student', icon: <User size={20} />, isActive: activeSection === 'Faculty', onClick: () => setActiveSection('Faculty') },
+        { label: 'Syllabus Topics', path: '/dashboard/student', icon: <BookOpen size={20} />, isActive: activeSection === 'Syllabus Topics', onClick: () => setActiveSection('Syllabus Topics') },
     ];
 
     const showToast = (message) => {
@@ -269,16 +413,19 @@ const StudentDashboard = () => {
                     <div className={styles.card}>
                         <h2 className={styles.cardTitle}>📅 Upcoming Exams</h2>
                         <div className={styles.examsList}>
-                            {upcomingExams.map(exam => (
-                                <div key={exam.id} className={styles.examItem}>
-                                    <div className={styles.examBadge}>{exam.exam}</div>
-                                    <div className={styles.examInfo}>
-                                        <span className={styles.examSubject}>{exam.subject}</span>
-                                        <span className={styles.examDate}>{exam.date} at {exam.time}</span>
+                            {loadingAnnouncements ? <p>Loading schedule...</p> :
+                                upcomingExams.length > 0 ? upcomingExams.map(exam => (
+                                    <div key={exam.id} className={styles.examItem}>
+                                        <div className={styles.examBadge}>{exam.exam}</div>
+                                        <div className={styles.examInfo}>
+                                            <span className={styles.examSubject}>{exam.subject}</span>
+                                            <span className={styles.examDate}>
+                                                {exam.date} • {exam.time} • Room: {exam.room}
+                                            </span>
+                                        </div>
+                                        <Clock size={16} className={styles.examIcon} />
                                     </div>
-                                    <Clock size={16} className={styles.examIcon} />
-                                </div>
-                            ))}
+                                )) : <p style={{ color: '#6b7280', padding: '1rem' }}>No upcoming exams scheduled.</p>}
                         </div>
                     </div>
 
@@ -286,14 +433,15 @@ const StudentDashboard = () => {
                         <h2 className={styles.cardTitle}>🔔 Notifications</h2>
                         <div className={styles.notificationsList}>
                             {notifications.map(notif => (
-                                <div key={notif.id} className={styles.notifItem}>
-                                    <div className={`${styles.notifDot} ${styles[notif.type]}`}></div>
+                                <div key={notif.id} className={`${styles.notifItem} ${!notif.isRead ? styles.unread : ''}`}>
+                                    <div className={`${styles.notifDot} ${styles[notif.type] || styles.info}`}></div>
                                     <div className={styles.notifContent}>
                                         <p className={styles.notifMessage}>{notif.message}</p>
                                         <span className={styles.notifTime}>{notif.time}</span>
                                     </div>
                                 </div>
                             ))}
+                            {notifications.length === 0 && <p style={{ padding: '1rem' }}>No new notifications.</p>}
                         </div>
                     </div>
                 </div>
@@ -346,9 +494,11 @@ const StudentDashboard = () => {
                                     className={styles.selectInput}
                                 >
                                     <option value="All">All Internals</option>
-                                    <option value="CIE-1">CIE - 1 / Skill Test 1</option>
-                                    <option value="CIE-2">CIE - 2 / Skill Test 2</option>
+                                    <option value="CIE-1">CIE - 1</option>
+                                    <option value="CIE-2">CIE - 2</option>
                                     <option value="CIE-3">CIE - 3</option>
+                                    <option value="CIE-4">CIE - 4</option>
+                                    <option value="CIE-5">CIE - 5</option>
                                 </select>
                                 <ChevronDown size={16} className={styles.selectIcon} />
                             </div>
@@ -372,6 +522,8 @@ const StudentDashboard = () => {
                                     {(selectedCIE === 'All' || selectedCIE === 'CIE-1') && <th>CIE-1</th>}
                                     {(selectedCIE === 'All' || selectedCIE === 'CIE-2') && <th>CIE-2</th>}
                                     {(selectedCIE === 'All' || selectedCIE === 'CIE-3') && <th>CIE-3</th>}
+                                    {(selectedCIE === 'All' || selectedCIE === 'CIE-4') && <th>CIE-4</th>}
+                                    {(selectedCIE === 'All' || selectedCIE === 'CIE-5') && <th>CIE-5</th>}
                                     <th>Activities</th>
                                     <th>Total CIE</th>
                                     <th>Status</th>
@@ -389,6 +541,8 @@ const StudentDashboard = () => {
                                             {(selectedCIE === 'All' || selectedCIE === 'CIE-1') && <td>{item.ia1}</td>}
                                             {(selectedCIE === 'All' || selectedCIE === 'CIE-2') && <td>{item.ia2}</td>}
                                             {(selectedCIE === 'All' || selectedCIE === 'CIE-3') && <td>{item.ia3}</td>}
+                                            {(selectedCIE === 'All' || selectedCIE === 'CIE-4') && <td>{item.ia4 || '-'}</td>}
+                                            {(selectedCIE === 'All' || selectedCIE === 'CIE-5') && <td>{item.ia5 || '-'}</td>}
                                             <td>{item.assignment}</td>
                                             <td className={styles.totalCell}>{item.total}</td>
                                             <td>
@@ -553,6 +707,78 @@ const StudentDashboard = () => {
         </div>
     );
 
+    const renderSyllabusTopics = () => {
+        const savedTracker = localStorage.getItem('syllabusTracker');
+        const progress = savedTracker ? JSON.parse(savedTracker) : {};
+
+        const savedStructure = localStorage.getItem('syllabusStructure');
+        const syllabusStructure = savedStructure ? JSON.parse(savedStructure) : {};
+
+        const savedCie = localStorage.getItem('cieSelector');
+        const cieSelector = savedCie ? JSON.parse(savedCie) : {};
+
+        const defaultUnits = [
+            { id: 'u1', name: 'Unit 1: Introduction' },
+            { id: 'u2', name: 'Unit 2: Core Concepts' },
+            { id: 'u3', name: 'Unit 3: Advanced Topics' },
+            { id: 'u4', name: 'Unit 4: Application' },
+            { id: 'u5', name: 'Unit 5: Case Studies' }
+        ];
+
+        // Find CIE selected units across all subjects
+        const updates = [];
+        Object.keys(cieSelector).forEach(subId => {
+            const subject = realSubjects.find(s => s.id === parseInt(subId)) || subjectsList.find(s => s.code.includes(subId));
+            const subName = realSubjects.find(s => s.id === parseInt(subId))?.name ||
+                subjectsList.find(s => s.code.includes(subId))?.name ||
+                "Subject";
+
+            const units = syllabusStructure[subId] || defaultUnits;
+
+            units.forEach(u => {
+                if (cieSelector[subId]?.[u.id]) {
+                    updates.push({
+                        sub: subName,
+                        unit: u.name,
+                        message: `Included in next CIE Syllabus.`
+                    });
+                }
+            });
+        });
+
+        return (
+            <div className={styles.detailsContainer}>
+                <div className={styles.card}>
+                    <h2 className={styles.cardTitle}>📖 Syllabus Notifications</h2>
+                    <p style={{ color: '#6b7280', marginBottom: '1.5rem' }}>
+                        Notifications from faculty regarding testable units/chapters.
+                    </p>
+
+                    {updates.length === 0 ? (
+                        <div style={{ textAlign: 'center', padding: '3rem', color: '#9ca3af', border: '2px dashed #e5e7eb', borderRadius: '12px' }}>
+                            <BookOpen size={48} style={{ margin: '0 auto 1rem', display: 'block' }} />
+                            <p>No syllabus updates yet.</p>
+                        </div>
+                    ) : (
+                        <div className={styles.notificationsList}>
+                            {updates.map((item, idx) => (
+                                <div key={idx} className={styles.notifItem} style={{ borderLeft: '4px solid #3b82f6', background: '#eff6ff' }}>
+                                    <div className={styles.notifContent}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
+                                            <span style={{ fontWeight: '600', color: '#1e40af' }}>{item.sub}</span>
+                                            <span style={{ fontSize: '0.8rem', color: '#60a5fa', background: 'white', padding: '2px 8px', borderRadius: '12px' }}>New</span>
+                                        </div>
+                                        <p className={styles.notifMessage} style={{ color: '#1e3a8a' }}>{item.message}</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </div>
+        );
+    };
+
     return (
         <DashboardLayout menuItems={menuItems}>
             <header className={styles.header}>
@@ -561,12 +787,6 @@ const StudentDashboard = () => {
                         {activeSection === 'Overview' ? `Welcome, ${studentInfo.name} 👋` : activeSection}
                     </h1>
                     <p className={styles.subtitle}>{studentInfo.branch} | Semester: {studentInfo.semester} | Reg No: {studentInfo.rollNo}</p>
-                </div>
-                <div className={styles.headerStats}>
-                    <div className={styles.headerStat}>
-                        <TrendingUp size={18} className={styles.statIcon} />
-                        <span>CGPA: <strong>{studentInfo.cgpa}</strong></span>
-                    </div>
                 </div>
             </header>
 
@@ -586,7 +806,7 @@ const StudentDashboard = () => {
                             <CheckCircle size={24} color="#16a34a" />
                         </div>
                         <div className={styles.statCardContent}>
-                            <span className={styles.statCardValue}>5/6</span>
+                            <span className={styles.statCardValue}>{cieStatus}</span>
                             <span className={styles.statCardLabel}>CIEs Completed</span>
                         </div>
                     </div>
@@ -617,6 +837,7 @@ const StudentDashboard = () => {
             {activeSection === 'Attendance' && renderAttendance()}
             {activeSection === 'Subjects' && renderSubjects()}
             {activeSection === 'Faculty' && renderFaculty()}
+            {activeSection === 'Syllabus Topics' && renderSyllabusTopics()}
 
             {/* Toast */}
             {toast.show && (

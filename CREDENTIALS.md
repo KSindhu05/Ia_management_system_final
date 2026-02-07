@@ -1,13 +1,37 @@
 # Login Credentials
 
-These are the valid credentials for the different roles in the IA Management System.
-Note: Currently, the system accepts **any password** that is at least 3 characters long.
+These are the valid credentials seeded by the backend (`DataInitializer.java`). Use these to log in.
 
-| Role | User ID Examples | Password |
-|------|-----------------|----------|
-| **Student** | `21CS045`<br>`S123`<br>`DIP/2024/CS/001` | `password` |
-| **Faculty** | `FAC001`<br>`F123`<br>`FAC/CS/001` | `password` |
-| **HOD** | `HODCS`<br>`HOD/CS/001` | `password` |
-| **Principal** | `PRIN01`<br>`ADMIN`<br>`PRIN/001` | `password` |
+## 🎓 Student
+| **Username** | `459CS25001` to `459CS25063` |
+| **Password** | `123` |
 
-> **Note:** These credentials check the ID prefix (S/DIP, F/FAC, H/HOD, P/PRIN/ADMIN) to determine the role. All data shown after login is currently mocked/static but will be connected to the backend soon.
+### 📝 Example Student Accounts
+| Reg No | Name |
+| :--- | :--- |
+| `459CS25001` | A KAVITHA |
+| `459CS25002` | ABHISHEKA |
+| `459CS25003` | ADARSH REDDY G |
+| ... | ... |
+| `459CS25063` | MARUTHI H |
+
+## 👨‍🏫 Faculty
+| Username | Password | Department |
+| :--- | :--- | :--- |
+| `![alt text](image.png)` | `password` | Maths |
+| `faculty_cs` | `password` | Computer Science |
+
+## 🏛️ HOD (Head of Department)
+| Field | Value |
+| :--- | :--- |
+| **Username** | `hod_cs` |
+| **Password** | `password` |
+
+## 🏫 Principal
+| Field | Value |
+| :--- | :--- |
+| **Username** | `principal` |
+| **Password** | `password` |
+
+---
+> **Note:** The seeding process ensures these users exist in the database. If you add new users manually, their credentials will depend on what you set.

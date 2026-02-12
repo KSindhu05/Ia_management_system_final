@@ -114,12 +114,39 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
         setMessageText('');
     };
 
-    const sendMessage = () => {
-        if (!messageText.trim()) return;
-        // Mock sending message
-        alert(`Message sent to ${messagingFaculty.fullName || messagingFaculty.username}:\n\n"${messageText}"`);
-        setMessagingFaculty(null);
-        setMessageText('');
+    const sendMessage = async () => {
+        if (!messageText.trim() || !messagingFaculty) return;
+
+        try {
+            const token = user?.token;
+            const headers = {
+                'Content-Type': 'application/json',
+                ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+            };
+
+            const response = await fetch(`${API_BASE_URL}/notifications`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({
+                    userId: messagingFaculty.id,
+                    message: messageText,
+                    type: 'MESSAGE',
+                    category: 'HOD'
+                })
+            });
+
+            if (response.ok) {
+                alert(`Message sent to ${messagingFaculty.fullName || messagingFaculty.username}`);
+                setMessagingFaculty(null);
+                setMessageText('');
+            } else {
+                const err = await response.text();
+                alert('Failed to send message: ' + err);
+            }
+        } catch (error) {
+            console.error('Error sending message:', error);
+            alert('Error sending message');
+        }
     };
 
     const menuItems = [

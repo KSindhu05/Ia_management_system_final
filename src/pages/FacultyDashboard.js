@@ -134,7 +134,7 @@ const FacultyDashboard = () => {
 
             // Fetch Notifications
             try {
-                const notifRes = await fetch(`${API_BASE_URL}/api/cie/faculty/notifications`, { headers });
+                const notifRes = await fetch(`${API_BASE_URL}/notifications`, { headers });
                 if (notifRes.ok) {
                     const notifs = await notifRes.json();
                     setNotifications(notifs);

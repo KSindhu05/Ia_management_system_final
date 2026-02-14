@@ -8,14 +8,14 @@ import java.util.Optional;
 
 @Repository
 public interface CieMarkRepository extends JpaRepository<CieMark, Long> {
-    List<CieMark> findByStudentId(Long studentId);
+    List<CieMark> findByStudent_Id(Long studentId);
 
-    List<CieMark> findBySubjectId(Long subjectId);
+    List<CieMark> findBySubject_Id(Long subjectId);
 
-    Optional<CieMark> findByStudentIdAndSubjectIdAndCieType(Long studentId, Long subjectId, String cieType);
+    Optional<CieMark> findByStudent_IdAndSubject_IdAndCieType(Long studentId, Long subjectId, String cieType);
 
     List<CieMark> findByStatus(String status);
 
     // For HOD pending approvals
-    List<CieMark> findByStatusAndSubjectDepartment(String status, String department);
+    List<CieMark> findByStatusAndSubject_Department(String status, String department);
 }

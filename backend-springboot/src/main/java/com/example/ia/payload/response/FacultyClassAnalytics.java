@@ -1,13 +1,7 @@
 package com.example.ia.payload.response;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 import java.util.List;
 
-@Data
-@AllArgsConstructor
-@NoArgsConstructor
 public class FacultyClassAnalytics {
     private int evaluated;
     private int pending;
@@ -16,11 +10,103 @@ public class FacultyClassAnalytics {
     private int topPerformers;
     private List<LowPerformer> lowPerformersList;
 
-    @Data
-    @AllArgsConstructor
+    public FacultyClassAnalytics() {
+    }
+
+    public FacultyClassAnalytics(int evaluated, int pending, double avgScore, int lowPerformers, int topPerformers,
+            List<LowPerformer> lowPerformersList) {
+        this.evaluated = evaluated;
+        this.pending = pending;
+        this.avgScore = avgScore;
+        this.lowPerformers = lowPerformers;
+        this.topPerformers = topPerformers;
+        this.lowPerformersList = lowPerformersList;
+    }
+
+    public int getEvaluated() {
+        return evaluated;
+    }
+
+    public void setEvaluated(int evaluated) {
+        this.evaluated = evaluated;
+    }
+
+    public int getPending() {
+        return pending;
+    }
+
+    public void setPending(int pending) {
+        this.pending = pending;
+    }
+
+    public double getAvgScore() {
+        return avgScore;
+    }
+
+    public void setAvgScore(double avgScore) {
+        this.avgScore = avgScore;
+    }
+
+    public int getLowPerformers() {
+        return lowPerformers;
+    }
+
+    public void setLowPerformers(int lowPerformers) {
+        this.lowPerformers = lowPerformers;
+    }
+
+    public int getTopPerformers() {
+        return topPerformers;
+    }
+
+    public void setTopPerformers(int topPerformers) {
+        this.topPerformers = topPerformers;
+    }
+
+    public List<LowPerformer> getLowPerformersList() {
+        return lowPerformersList;
+    }
+
+    public void setLowPerformersList(List<LowPerformer> lowPerformersList) {
+        this.lowPerformersList = lowPerformersList;
+    }
+
     public static class LowPerformer {
         private String name;
         private String subject;
         private double score;
+
+        public LowPerformer() {
+        }
+
+        public LowPerformer(String name, String subject, double score) {
+            this.name = name;
+            this.subject = subject;
+            this.score = score;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        public String getSubject() {
+            return subject;
+        }
+
+        public void setSubject(String subject) {
+            this.subject = subject;
+        }
+
+        public double getScore() {
+            return score;
+        }
+
+        public void setScore(double score) {
+            this.score = score;
+        }
     }
 }

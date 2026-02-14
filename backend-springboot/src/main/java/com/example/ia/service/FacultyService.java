@@ -46,7 +46,7 @@ public class FacultyService {
         List<FacultyClassAnalytics.LowPerformer> lowList = new ArrayList<>();
 
         for (Subject sub : subjects) {
-            List<CieMark> marks = cieMarkRepository.findBySubjectId(sub.getId());
+            List<CieMark> marks = cieMarkRepository.findBySubject_Id(sub.getId());
             for (CieMark mark : marks) {
                 if ("SUBMITTED".equals(mark.getStatus()) || "APPROVED".equals(mark.getStatus())) {
                     evaluated++;

@@ -399,7 +399,7 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
                 const token = user?.token;
                 if (!token) return;
                 const headers = { 'Authorization': `Bearer ${token}` };
-                const response = await fetch(`${API_BASE_URL}/api/cie/hod/notifications`, { headers });
+                const response = await fetch(`${API_BASE_URL}/cie/hod/notifications`, { headers });
                 if (response.ok) {
                     const data = await response.json();
                     setNotifications(data);

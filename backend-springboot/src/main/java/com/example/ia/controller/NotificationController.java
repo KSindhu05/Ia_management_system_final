@@ -5,14 +5,13 @@ import com.example.ia.entity.User;
 import com.example.ia.repository.NotificationRepository;
 import com.example.ia.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
@@ -25,14 +24,42 @@ public class NotificationController {
     @Autowired
     UserRepository userRepository;
 
-    @GetMapping("/")
+    @GetMapping("")
     @PreAuthorize("hasRole('STUDENT') or hasRole('FACULTY') or hasRole('HOD') or hasRole('PRINCIPAL')")
     public List<Notification> getMyNotifications() {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
-        User user = userRepository.findByUsername(username).orElse(null);
+        User user = userRepository.findByUsernameIgnoreCase(username).orElse(null);
         if (user == null)
             return List.of();
 
         return notificationRepository.findByUserIdOrderByCreatedAtDesc(user.getId());
+    }
+
+    @PostMapping("/broadcast")
+    @PreAuthorize("hasRole('HOD') or hasRole('PRINCIPAL')")
+    public ResponseEntity<?> broadcastNotification(@RequestBody Map<String, String> data) {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        User sender = userRepository.findByUsernameIgnoreCase(username).orElse(null);
+        if (sender == null) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Sender not found"));
+        }
+
+        String message = data.getOrDefault("message", "");
+        String targetRole = data.getOrDefault("targetRole", "FACULTY");
+        String department = sender.getDepartment();
+
+        // Find all users of targetRole in the same department
+        List<User> targets = userRepository.findByRoleAndDepartment(targetRole, department);
+
+        for (User target : targets) {
+            Notification notif = new Notification();
+            notif.setUser(target);
+            notif.setMessage(message);
+            notif.setType("INFO");
+            notif.setCategory("broadcast");
+            notificationRepository.save(notif);
+        }
+
+        return ResponseEntity.ok(Map.of("message", "Notification broadcast to " + targets.size() + " recipients"));
     }
 }

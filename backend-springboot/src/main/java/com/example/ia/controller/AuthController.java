@@ -18,7 +18,14 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<?> authenticateUser(@RequestBody LoginRequest loginRequest) {
-        return ResponseEntity.ok(authService.authenticateUser(loginRequest));
+        System.out.println("DEBUG: AuthController received login request for: " + loginRequest.getUsername());
+        try {
+            return ResponseEntity.ok(authService.authenticateUser(loginRequest));
+        } catch (Exception e) {
+            System.out
+                    .println("DEBUG: Authentication failed for " + loginRequest.getUsername() + ": " + e.getMessage());
+            return ResponseEntity.status(401).body(new MessageResponse("Invalid credentials"));
+        }
     }
 
     @PostMapping("/signup") // Assuming an admin or initial script calls this

@@ -44,6 +44,12 @@ public class MarksController {
         return marksService.getMarksByStudentUsername(username);
     }
 
+    @GetMapping("/student/{studentId}")
+    @PreAuthorize("hasRole('FACULTY') or hasRole('HOD') or hasRole('PRINCIPAL')")
+    public List<CieMark> getMarksByStudent(@PathVariable Long studentId) {
+        return marksService.getMarksByStudentId(studentId);
+    }
+
     @PostMapping("/update/batch")
     @PreAuthorize("hasRole('FACULTY')")
     public ResponseEntity<?> updateBatchMarks(@RequestBody List<MarkUpdateDto> markDtos) {
@@ -83,15 +89,43 @@ public class MarksController {
 
     @PostMapping("/approve")
     @PreAuthorize("hasRole('HOD')")
-    public ResponseEntity<?> approveMarks(@RequestBody ApprovalRequest request) {
-        marksService.approveMarks(request.getSubjectId(), request.getIaType());
+    public ResponseEntity<?> approveMarks(@RequestParam Long subjectId, @RequestParam String iaType) {
+        marksService.approveMarks(subjectId, iaType);
         return ResponseEntity.ok(new MessageResponse("Marks approved"));
     }
 
-    // Inner DTO for approval
-    @lombok.Data
-    static class ApprovalRequest {
+    @PostMapping("/reject")
+    @PreAuthorize("hasRole('HOD')")
+    public ResponseEntity<?> rejectMarks(@RequestParam Long subjectId, @RequestParam String iaType) {
+        marksService.rejectMarks(subjectId, iaType);
+        return ResponseEntity.ok(new MessageResponse("Marks rejected"));
+    }
+
+    @PostMapping("/unlock")
+    @PreAuthorize("hasRole('HOD')")
+    public ResponseEntity<?> unlockMarks(@RequestBody UnlockRequest request) {
+        marksService.unlockMarks(request.getSubjectId(), request.getIaType());
+        return ResponseEntity.ok(new MessageResponse("Marks unlocked for editing"));
+    }
+
+    static class UnlockRequest {
         private Long subjectId;
         private String iaType;
+
+        public Long getSubjectId() {
+            return subjectId;
+        }
+
+        public void setSubjectId(Long subjectId) {
+            this.subjectId = subjectId;
+        }
+
+        public String getIaType() {
+            return iaType;
+        }
+
+        public void setIaType(String iaType) {
+            this.iaType = iaType;
+        }
     }
 }

@@ -30,6 +30,8 @@ public class AuthService {
     JwtUtils jwtUtils;
 
     public JwtResponse authenticateUser(LoginRequest loginRequest) {
+        System.out.println("DEBUG: AuthService authenticating: " + loginRequest.getUsername() + " with password: "
+                + loginRequest.getPassword());
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword()));
 
@@ -38,6 +40,11 @@ public class AuthService {
 
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal(); // Assuming single role
         String role = userDetails.getAuthorities().stream().findFirst().get().getAuthority();
+        // Strip ROLE_ prefix for frontend (frontend expects STUDENT, not ROLE_STUDENT)
+        if (role.startsWith("ROLE_")) {
+            role = role.substring(5);
+        }
+        System.out.println("DEBUG: Authentication successful for " + loginRequest.getUsername() + ", Role: " + role);
 
         return new JwtResponse(jwt,
                 userDetails.getId(),

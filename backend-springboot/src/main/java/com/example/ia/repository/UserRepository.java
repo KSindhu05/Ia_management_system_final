@@ -10,11 +10,19 @@ import java.util.List;
 public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByUsername(String username);
 
+    Optional<User> findByUsernameIgnoreCase(String username);
+
     List<User> findByRole(String role);
 
     List<User> findByDepartment(String department);
 
     boolean existsByUsername(String username);
 
+    boolean existsByUsernameIgnoreCase(String username);
+
     Optional<User> findByFullName(String fullName);
+
+    List<User> findByRoleAndDepartment(String role, String department);
+
+    long countByRoleAndDepartment(String role, String department);
 }

@@ -28,7 +28,7 @@ public class MarksService {
     public void submitMarks(Long subjectId, String cieType, String facultyUsername) {
         // Find all marks for this subject and CIE type and update status to SUBMITTED
         // In a real app, strict validation against faculty assignment would be here
-        List<CieMark> marks = cieMarkRepository.findBySubjectId(subjectId);
+        List<CieMark> marks = cieMarkRepository.findBySubject_Id(subjectId);
         marks.forEach(mark -> {
             if (mark.getCieType().equals(cieType)) {
                 mark.setStatus("SUBMITTED");
@@ -38,13 +38,13 @@ public class MarksService {
     }
 
     public List<CieMark> getMarksBySubject(Long subjectId) {
-        return cieMarkRepository.findBySubjectId(subjectId);
+        return cieMarkRepository.findBySubject_Id(subjectId);
     }
 
     @Transactional
     public void updateBatchMarks(List<CieMark> marksPayload) {
         for (CieMark payload : marksPayload) {
-            Optional<CieMark> existing = cieMarkRepository.findByStudentIdAndSubjectIdAndCieType(
+            Optional<CieMark> existing = cieMarkRepository.findByStudent_IdAndSubject_IdAndCieType(
                     payload.getStudent().getId(),
                     payload.getSubject().getId(),
                     payload.getCieType());
@@ -64,12 +64,12 @@ public class MarksService {
 
     // HOD Features
     public List<CieMark> getPendingApprovals(String department) {
-        return cieMarkRepository.findByStatusAndSubjectDepartment("SUBMITTED", department);
+        return cieMarkRepository.findByStatusAndSubject_Department("SUBMITTED", department);
     }
 
     @Transactional
     public void approveMarks(Long subjectId, String cieType) {
-        List<CieMark> marks = cieMarkRepository.findBySubjectId(subjectId);
+        List<CieMark> marks = cieMarkRepository.findBySubject_Id(subjectId);
         marks.forEach(mark -> {
             if (mark.getCieType().equals(cieType) && "SUBMITTED".equals(mark.getStatus())) {
                 mark.setStatus("APPROVED");
@@ -80,7 +80,7 @@ public class MarksService {
 
     @Transactional
     public void rejectMarks(Long subjectId, String cieType) {
-        List<CieMark> marks = cieMarkRepository.findBySubjectId(subjectId);
+        List<CieMark> marks = cieMarkRepository.findBySubject_Id(subjectId);
         marks.forEach(mark -> {
             if (mark.getCieType().equals(cieType) && "SUBMITTED".equals(mark.getStatus())) {
                 mark.setStatus("REJECTED");
@@ -96,6 +96,22 @@ public class MarksService {
         if (student == null) {
             return List.of();
         }
-        return cieMarkRepository.findByStudentId(student.getId());
+        return cieMarkRepository.findByStudent_Id(student.getId());
+    }
+
+    @Transactional(readOnly = true)
+    public List<CieMark> getMarksByStudentId(Long studentId) {
+        return cieMarkRepository.findByStudent_Id(studentId);
+    }
+
+    @Transactional
+    public void unlockMarks(Long subjectId, String cieType) {
+        List<CieMark> marks = cieMarkRepository.findBySubject_Id(subjectId);
+        marks.forEach(mark -> {
+            if (mark.getCieType().equals(cieType)) {
+                mark.setStatus("PENDING");
+            }
+        });
+        cieMarkRepository.saveAll(marks);
     }
 }

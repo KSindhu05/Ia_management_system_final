@@ -194,33 +194,50 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
                 ...(token ? { 'Authorization': `Bearer ${token}` } : {})
             };
 
-            // In a real app, you'd likely have a specific endpoint for broadcasting
-            // For now, simulating by sending to a specific group or logging
-            const payload = {
-                recipientType: messageRecipientType,
-                message: newMessageText,
-                senderId: user?.id,
-                department: selectedDept
+            const sendBroadcast = async (role) => {
+                const payload = {
+                    targetRole: role, // Backend expects 'targetRole' not 'recipientType'
+                    message: newMessageText,
+                    senderId: user?.id,
+                    department: selectedDept
+                };
+
+                return fetch(`${API_BASE_URL}/notifications/broadcast`, {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify(payload)
+                });
             };
 
-            // NOTE: This endpoint might need to be adjusted based on actual backend implementation
-            // For now reusing the notification endpoint or a broadcast one
-            const response = await fetch(`${API_BASE_URL}/notifications/broadcast`, {
-                method: 'POST',
-                headers,
-                body: JSON.stringify(payload)
-            });
+            let responses = [];
+            if (messageRecipientType === 'BOTH') {
+                // Send to both Faculty and Students
+                const res1 = sendBroadcast('FACULTY');
+                const res2 = sendBroadcast('STUDENT');
+                responses = await Promise.all([res1, res2]);
+            } else {
+                // Send to specifically selected role
+                const res = await sendBroadcast(messageRecipientType);
+                responses = [res];
+            }
 
-            if (response.ok) {
+            // Check if all requests were successful
+            const allOk = responses.every(r => r.ok);
+
+            if (allOk) {
                 const groupName = messageRecipientType === 'BOTH' ? 'Students and Faculty' : `${messageRecipientType.toLowerCase()}s`;
                 alert(`Message sent to all ${groupName}!`);
                 setNewMessageText('');
             } else {
-                // Fallback for demo/mock if endpoint doesn't exist
-                console.log('Mock send:', payload);
-                const groupName = messageRecipientType === 'BOTH' ? 'Students and Faculty' : `${messageRecipientType.toLowerCase()}s`;
-                alert(`Message sent to all ${groupName} (Simulated)`);
-                setNewMessageText('');
+                console.error('Some messages failed');
+                // Log details of failed requests
+                responses.forEach(async (r, idx) => {
+                    if (!r.ok) {
+                        const err = await r.text();
+                        console.error(`Request ${idx + 1} failed: ${r.status} ${r.statusText}`, err);
+                    }
+                });
+                alert('Error sending message to some groups. Please check console for details.');
             }
         } catch (error) {
             console.error('Error sending message:', error);
@@ -1038,12 +1055,24 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
                             <div className={styles.formGroup}>
                                 <label style={{ fontWeight: 600, display: 'block', marginBottom: '0.5rem' }}>Message</label>
                                 <textarea
-                                    className={styles.textarea}
+                                    className={styles.input}
                                     rows="5"
                                     placeholder="Type your message here..."
-                                    value={newMessageText}
-                                    onChange={(e) => setNewMessageText(e.target.value)}
-                                    style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid #e5e7eb' }}
+                                    value={newMessageText || ''}
+                                    onChange={(e) => {
+                                        console.log('Typing:', e.target.value);
+                                        setNewMessageText(e.target.value);
+                                    }}
+                                    disabled={false}
+                                    style={{
+                                        width: '100%',
+                                        padding: '0.75rem',
+                                        borderRadius: '0.5rem',
+                                        border: '1px solid #e5e7eb',
+                                        color: '#333333',
+                                        position: 'relative',
+                                        zIndex: 10
+                                    }}
                                 />
                             </div>
                             <button className={styles.primaryBtn} onClick={handleSendNewMessage} style={{ alignSelf: 'flex-start' }}>

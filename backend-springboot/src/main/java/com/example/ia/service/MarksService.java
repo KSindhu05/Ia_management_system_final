@@ -110,11 +110,47 @@ public class MarksService {
     @Transactional
     public void unlockMarks(Long subjectId, String cieType) {
         List<CieMark> marks = cieMarkRepository.findBySubject_Id(subjectId);
+
+        // Get all students who already have marks for this CIE type
+        java.util.Set<Long> studentsWithMarks = new java.util.HashSet<>();
+
+        // Update existing marks to PENDING
         marks.forEach(mark -> {
             if (mark.getCieType().equals(cieType)) {
                 mark.setStatus("PENDING");
+                if (mark.getStudent() != null) {
+                    studentsWithMarks.add(mark.getStudent().getId());
+                }
             }
         });
         cieMarkRepository.saveAll(marks);
+
+        // For CIE types that don't have records yet (e.g. CIE-2 to CIE-5),
+        // create PENDING records for all students who have CIE-1 marks for this subject
+        java.util.Set<Long> allStudentIds = new java.util.HashSet<>();
+        marks.forEach(mark -> {
+            if (mark.getStudent() != null) {
+                allStudentIds.add(mark.getStudent().getId());
+            }
+        });
+
+        Subject subject = subjectRepository.findById(subjectId).orElse(null);
+        if (subject != null) {
+            for (Long studentId : allStudentIds) {
+                if (!studentsWithMarks.contains(studentId)) {
+                    // Create new PENDING record for this student + CIE type
+                    Student student = studentRepository.findById(studentId).orElse(null);
+                    if (student != null) {
+                        CieMark newMark = new CieMark();
+                        newMark.setStudent(student);
+                        newMark.setSubject(subject);
+                        newMark.setCieType(cieType);
+                        newMark.setMarks(0.0);
+                        newMark.setStatus("PENDING");
+                        cieMarkRepository.save(newMark);
+                    }
+                }
+            }
+        }
     }
 }

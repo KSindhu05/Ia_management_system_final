@@ -38,35 +38,26 @@ public class FacultyService {
 
     public FacultyClassAnalytics getAnalytics(String username) {
         List<Subject> subjects = getSubjectsForFaculty(username);
-        int evaluated = 0;
-        int pending = 0;
         double totalScore = 0;
         int scoredCount = 0;
         int low = 0;
         int top = 0;
         Set<Long> uniqueStudents = new HashSet<>();
-        Set<Long> evaluatedStudents = new HashSet<>();
         List<FacultyClassAnalytics.LowPerformer> lowList = new ArrayList<>();
 
         for (Subject sub : subjects) {
             List<CieMark> marks = cieMarkRepository.findBySubject_Id(sub.getId());
             for (CieMark mark : marks) {
+                // Every student with a mark record is counted as evaluated
                 if (mark.getStudent() != null) {
                     uniqueStudents.add(mark.getStudent().getId());
                 }
 
-                // Only count marks that have actual values (not 0/null PENDING)
-                boolean hasRealMark = mark.getMarks() != null && mark.getMarks() > 0;
-
-                if (hasRealMark) {
+                // For avg/low/top calculations, only use marks with actual values > 0
+                if (mark.getMarks() != null && mark.getMarks() > 0) {
                     double score = mark.getMarks();
                     totalScore += score;
                     scoredCount++;
-                    evaluated++;
-
-                    if (mark.getStudent() != null) {
-                        evaluatedStudents.add(mark.getStudent().getId());
-                    }
 
                     if (score < 20) {
                         low++;
@@ -82,11 +73,9 @@ public class FacultyService {
             }
         }
 
-        // Pending = total unique students minus students who have at least one
-        // evaluated mark
-        pending = uniqueStudents.size() - evaluatedStudents.size();
-        if (pending < 0)
-            pending = 0;
+        // All students with records are evaluated, pending = 0
+        int evaluated = uniqueStudents.size();
+        int pending = 0;
 
         // Average as percentage of max marks (50)
         double avg = scoredCount > 0 ? Math.round((totalScore / scoredCount / 50.0 * 100) * 10.0) / 10.0 : 0;

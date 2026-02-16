@@ -23,6 +23,7 @@ const FacultyDashboard = () => {
     const [selectedSubject, setSelectedSubject] = useState(null);
     const [marks, setMarks] = useState({}); // Map { studentId: { co1: val... } }
     const [isLocked, setIsLocked] = useState(false); // For Commit/Edit workflow
+    const [cieLockStatus, setCieLockStatus] = useState({ cie1: true, cie2: true, cie3: true, cie4: true, cie5: true }); // Per-CIE lock
     const [saving, setSaving] = useState(false);
     const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
     const [searchTerm, setSearchTerm] = useState('');
@@ -595,6 +596,13 @@ const FacultyDashboard = () => {
             isActive: activeSection === 'CIE Entry',
             onClick: () => { setActiveSection('CIE Entry'); setSelectedSubject(null); }
         },
+        {
+            label: 'CIE Schedule',
+            path: '/dashboard/faculty',
+            icon: <Calendar size={20} />,
+            isActive: activeSection === 'CIE Schedule',
+            onClick: () => { setActiveSection('CIE Schedule'); setSelectedSubject(null); }
+        },
 
         {
             label: 'Mentorship',
@@ -631,6 +639,7 @@ const FacultyDashboard = () => {
         setActiveSection('CIE Entry');
         setMarks({}); // Clear previous
         setIsLocked(false);
+        setCieLockStatus({ cie1: true, cie2: true, cie3: true, cie4: true, cie5: true }); // Lock all by default
 
         try {
             const token = user?.token;
@@ -646,27 +655,72 @@ const FacultyDashboard = () => {
                     newMarks[s.id] = { cie1: '', cie2: '', cie3: '', cie4: '', cie5: '' };
                 });
 
+                // Track per-CIE statuses to determine lock state
+                const cieStatuses = { cie1: new Set(), cie2: new Set(), cie3: new Set(), cie4: new Set(), cie5: new Set() };
+
+                console.log('--- FETCHED MARKS DEBUG ---');
+                console.log('Current Students Count:', students.length);
+                console.log('Fetched Marks Count:', data.length);
+
+                // Create a set of valid student IDs for filtering
+                const validStudentIds = new Set(students.map(s => s.id));
+
                 data.forEach(m => {
                     if (m.student && m.student.id) {
                         const sId = m.student.id;
+
+                        // CRITICAL FIX: Ignore marks for students not in the current list (phantom marks)
+                        if (!validStudentIds.has(sId)) return;
+
                         if (!newMarks[sId]) newMarks[sId] = { cie1: '', cie2: '', cie3: '', cie4: '', cie5: '' };
 
-                        // Backend returns 'cieType' (e.g., 'CIE1'), not 'iaType'
+                        // Normalize key: CIE-1 -> cie1, CIE1 -> cie1
+                        const rawType = m.cieType || m.iaType;
+                        const key = rawType ? rawType.replace(/[^a-zA-Z0-9]/g, '').toLowerCase() : null;
 
-                        const key = m.cieType ? m.cieType.toLowerCase() : (m.iaType ? m.iaType.toLowerCase() : null);
-                        if (key && newMarks[sId]) newMarks[sId][key] = m.totalScore || ''; // Use totalScore
+                        if (key && newMarks[sId]) {
+                            // Use marks value, treat 0 as empty for display if PENDING
+                            // Robust check for 0 marks (don't treat 0 as false)
+                            const markVal = (m.marks === 0 || m.marks === null) && (m.status === 'PENDING' || !m.status) ? '' : (m.marks !== null ? m.marks : '');
+                            newMarks[sId][key] = markVal;
+                        }
 
-
+                        // Track status per CIE type
+                        if (key && cieStatuses[key]) {
+                            cieStatuses[key].add(m.status || 'PENDING');
+                        }
                     }
                 });
-                setMarks(newMarks);
-                // Check Status for Lock
-                const firstMark = data.find(m => m.status);
-                if (firstMark && (firstMark.status === 'SUBMITTED' || firstMark.status === 'APPROVED')) {
-                    setIsLocked(true);
-                    showToast(`Marks for this subject are ${firstMark.status}`, 'info');
-                } else {
-                    setIsLocked(false);
+
+                console.log('CIE Statuses:', cieStatuses);
+
+                // Determine per-CIE lock status:
+                // A CIE is EDITABLE (unlocked) only if it has PENDING marks
+                // A CIE is LOCKED if it has APPROVED/SUBMITTED marks or no marks at all
+                const newLockStatus = {};
+                ['cie1', 'cie2', 'cie3', 'cie4', 'cie5'].forEach(cie => {
+                    if (cieStatuses[cie].size === 0) {
+                        // No marks exist for this CIE — locked (HOD hasn't opened it)
+                        newLockStatus[cie] = true;
+                    } else if (cieStatuses[cie].has('APPROVED')) {
+                        // HOD approved — locked
+                        newLockStatus[cie] = true;
+                    } else if (cieStatuses[cie].has('SUBMITTED')) {
+                        // Faculty submitted, waiting for HOD — locked
+                        newLockStatus[cie] = true;
+                    } else {
+                        // PENDING status — editable
+                        newLockStatus[cie] = false;
+                    }
+                });
+                setCieLockStatus(newLockStatus);
+
+                // Overall lock: if ALL CIEs with data are locked
+                const hasAnyEditable = Object.values(newLockStatus).some(v => !v);
+                setIsLocked(!hasAnyEditable);
+
+                if (!hasAnyEditable && data.length > 0) {
+                    showToast('All CIE marks are locked/approved', 'info');
                 }
 
                 setMarks(newMarks);
@@ -1469,18 +1523,41 @@ const FacultyDashboard = () => {
                                         <span style={{ fontSize: '0.85rem', color: '#6b7280' }}>Code: {sub.code}</span>
                                         <span style={{ fontSize: '0.85rem', color: '#6b7280', fontWeight: '500' }}>
                                             <Users size={14} style={{ display: 'inline', marginRight: '4px' }} />
-                                            64 Students
+                                            {/* Dynamic Student Count */}
+                                            {students.filter(s => s.department === sub.department && String(s.semester) === String(sub.semester)).length} Students
                                         </span>
                                     </div>
 
-                                    {/* Mock Progress */}
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', color: '#4b5563', marginBottom: '4px' }}>
-                                        <span style={{ flex: 1 }}>Completion</span>
-                                        <span style={{ fontWeight: '600' }}>75%</span>
-                                    </div>
-                                    <div style={{ width: '100%', height: '6px', background: '#f3f4f6', borderRadius: '4px', overflow: 'hidden' }}>
-                                        <div style={{ width: '75%', height: '100%', background: '#10b981', borderRadius: '4px' }}></div>
-                                    </div>
+                                    {/* Dynamic Progress Calculation */}
+                                    {(() => {
+                                        // Filter students for this specific subject
+                                        const subjectStudents = students.filter(s => s.department === sub.department && String(s.semester) === String(sub.semester));
+                                        const totalStd = subjectStudents.length;
+
+                                        // Count how many have at least one mark entry for this subject
+                                        let evaluatedCount = 0;
+                                        if (totalStd > 0 && allStudentMarks && allStudentMarks[sub.id]) {
+                                            evaluatedCount = subjectStudents.filter(std => {
+                                                const m = allStudentMarks[sub.id][std.id];
+                                                // Check if student has ANY valid mark (CIE1-5)
+                                                return m && ['cie1', 'cie2', 'cie3', 'cie4', 'cie5'].some(k => m[k] !== undefined && m[k] !== null && m[k] !== '');
+                                            }).length;
+                                        }
+
+                                        const completion = totalStd > 0 ? Math.round((evaluatedCount / totalStd) * 100) : 0;
+
+                                        return (
+                                            <>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', color: '#4b5563', marginBottom: '4px' }}>
+                                                    <span style={{ flex: 1 }}>Completion</span>
+                                                    <span style={{ fontWeight: '600' }}>{completion}%</span>
+                                                </div>
+                                                <div style={{ width: '100%', height: '6px', background: '#f3f4f6', borderRadius: '4px', overflow: 'hidden' }}>
+                                                    <div style={{ width: `${completion}%`, height: '100%', background: completion === 100 ? '#10b981' : '#3b82f6', borderRadius: '4px' }}></div>
+                                                </div>
+                                            </>
+                                        );
+                                    })()}
                                 </div>
 
                                 <div className={styles.subjectFooter} style={{ borderTop: '1px solid #f3f4f6', paddingTop: '0.75rem', marginTop: '0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1602,11 +1679,11 @@ const FacultyDashboard = () => {
                                     <th>Sl No</th>
                                     <th>Reg No</th>
                                     <th>Student Name</th>
-                                    <th>CIE-1 (50)</th>
-                                    <th>CIE-2 (50)</th>
-                                    <th>CIE-3 (50)</th>
-                                    <th>CIE-4 (50)</th>
-                                    <th>CIE-5 (50)</th>
+                                    <th>CIE-1 (50) {cieLockStatus.cie1 ? '🔒' : '✏️'}</th>
+                                    <th>CIE-2 (50) {cieLockStatus.cie2 ? '🔒' : '✏️'}</th>
+                                    <th>CIE-3 (50) {cieLockStatus.cie3 ? '🔒' : '✏️'}</th>
+                                    <th>CIE-4 (50) {cieLockStatus.cie4 ? '🔒' : '✏️'}</th>
+                                    <th>CIE-5 (50) {cieLockStatus.cie5 ? '🔒' : '✏️'}</th>
 
                                     <th>Total (250)</th>
                                 </tr>
@@ -1639,7 +1716,9 @@ const FacultyDashboard = () => {
                                                         className={styles.markInput}
                                                         value={valCIE1}
                                                         onChange={(e) => handleMarkChange(student.id, 'cie1', e.target.value)}
-                                                        disabled={isLocked}
+                                                        disabled={cieLockStatus.cie1}
+                                                        placeholder={cieLockStatus.cie1 ? '🔒' : ''}
+                                                        style={cieLockStatus.cie1 ? { background: '#f1f5f9', color: '#64748b', cursor: 'not-allowed' } : {}}
                                                     />
                                                 </td>
                                                 <td>
@@ -1648,7 +1727,9 @@ const FacultyDashboard = () => {
                                                         className={styles.markInput}
                                                         value={valCIE2}
                                                         onChange={(e) => handleMarkChange(student.id, 'cie2', e.target.value)}
-                                                        disabled={isLocked}
+                                                        disabled={cieLockStatus.cie2}
+                                                        placeholder={cieLockStatus.cie2 ? '🔒' : ''}
+                                                        style={cieLockStatus.cie2 ? { background: '#f1f5f9', color: '#64748b', cursor: 'not-allowed' } : {}}
                                                     />
                                                 </td>
                                                 <td>
@@ -1657,7 +1738,9 @@ const FacultyDashboard = () => {
                                                         className={styles.markInput}
                                                         value={valCIE3}
                                                         onChange={(e) => handleMarkChange(student.id, 'cie3', e.target.value)}
-                                                        disabled={isLocked}
+                                                        disabled={cieLockStatus.cie3}
+                                                        placeholder={cieLockStatus.cie3 ? '🔒' : ''}
+                                                        style={cieLockStatus.cie3 ? { background: '#f1f5f9', color: '#64748b', cursor: 'not-allowed' } : {}}
                                                     />
                                                 </td>
                                                 <td>
@@ -1666,7 +1749,9 @@ const FacultyDashboard = () => {
                                                         className={styles.markInput}
                                                         value={valCIE4}
                                                         onChange={(e) => handleMarkChange(student.id, 'cie4', e.target.value)}
-                                                        disabled={isLocked}
+                                                        disabled={cieLockStatus.cie4}
+                                                        placeholder={cieLockStatus.cie4 ? '🔒' : ''}
+                                                        style={cieLockStatus.cie4 ? { background: '#f1f5f9', color: '#64748b', cursor: 'not-allowed' } : {}}
                                                     />
                                                 </td>
                                                 <td>
@@ -1675,7 +1760,9 @@ const FacultyDashboard = () => {
                                                         className={styles.markInput}
                                                         value={valCIE5}
                                                         onChange={(e) => handleMarkChange(student.id, 'cie5', e.target.value)}
-                                                        disabled={isLocked}
+                                                        disabled={cieLockStatus.cie5}
+                                                        placeholder={cieLockStatus.cie5 ? '🔒' : ''}
+                                                        style={cieLockStatus.cie5 ? { background: '#f1f5f9', color: '#64748b', cursor: 'not-allowed' } : {}}
                                                     />
                                                 </td>
 

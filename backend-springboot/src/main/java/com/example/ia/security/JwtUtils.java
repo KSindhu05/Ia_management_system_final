@@ -45,7 +45,9 @@ public class JwtUtils {
             Jwts.parserBuilder().setSigningKey(getSigningKey()).build().parseClaimsJws(authToken);
             return true;
         } catch (JwtException e) {
-            System.err.println("Invalid JWT token: " + e.getMessage());
+            System.out.println("DEBUG: JwtUtils - Invalid JWT token: " + e.getMessage());
+        } catch (IllegalArgumentException e) {
+            System.out.println("DEBUG: JwtUtils - JWT claims string is empty: " + e.getMessage());
         }
         return false;
     }

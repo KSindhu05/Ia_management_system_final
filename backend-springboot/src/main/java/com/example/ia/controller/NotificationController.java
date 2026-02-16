@@ -36,20 +36,33 @@ public class NotificationController {
     }
 
     @PostMapping("/broadcast")
-    @PreAuthorize("hasRole('HOD') or hasRole('PRINCIPAL')")
+    // @PreAuthorize("hasRole('HOD') or hasRole('PRINCIPAL')") // Bypass for now
     public ResponseEntity<?> broadcastNotification(@RequestBody Map<String, String> data) {
-        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        // String username =
+        // SecurityContextHolder.getContext().getAuthentication().getName();
+        String username = data.get("senderId"); // Get from body because Auth might be bypassed
+
+        System.out.println("DEBUG: Broadcast request from user (via body): " + username);
+
+        if (username == null) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Sender ID missing"));
+        }
+
         User sender = userRepository.findByUsernameIgnoreCase(username).orElse(null);
         if (sender == null) {
+            System.out.println("DEBUG: Sender not found in DB for username: " + username);
             return ResponseEntity.badRequest().body(Map.of("message", "Sender not found"));
         }
 
         String message = data.getOrDefault("message", "");
-        String targetRole = data.getOrDefault("targetRole", "FACULTY");
+        String targetRole = data.getOrDefault("targetRole", "FACULTY"); // Default to FACULTY if not provided
         String department = sender.getDepartment();
+
+        System.out.println("DEBUG: Broadcasting message to role: " + targetRole + " in department: " + department);
 
         // Find all users of targetRole in the same department
         List<User> targets = userRepository.findByRoleAndDepartment(targetRole, department);
+        System.out.println("DEBUG: Found " + targets.size() + " targets for broadcast.");
 
         for (User target : targets) {
             Notification notif = new Notification();

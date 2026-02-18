@@ -28,16 +28,20 @@ public class DataInitializer {
             java.util.List<com.example.ia.entity.CieMark> allMarks = cieMarkRepository.findAll();
             int fixedCount = 0;
             for (com.example.ia.entity.CieMark m : allMarks) {
-                // Check if mark is 0.0 (or close to it) and PENDING or null status
-                if (m.getMarks() != null && Math.abs(m.getMarks()) < 0.001
-                        && (m.getStatus() == null || "PENDING".equals(m.getStatus()))) {
+                boolean isZero = m.getMarks() != null && Math.abs(m.getMarks()) < 0.001;
+                if (!isZero)
+                    continue;
+
+                String status = m.getStatus();
+                if (status == null || "PENDING".equals(status) || "REJECTED".equals(status)) {
+                    // Zero placeholder or rejected zero — reset to null/PENDING so faculty can
+                    // re-enter
                     m.setMarks(null);
+                    m.setStatus("PENDING");
                     cieMarkRepository.save(m);
                     fixedCount++;
-                }
-                // Also clean up erroneously SUBMITTED 0 marks
-                if (m.getMarks() != null && Math.abs(m.getMarks()) < 0.001
-                        && ("SUBMITTED".equals(m.getStatus()) || "APPROVED".equals(m.getStatus()))) {
+                } else if ("SUBMITTED".equals(status) || "APPROVED".equals(status)) {
+                    // Erroneously submitted/approved zero — delete
                     cieMarkRepository.delete(m);
                     fixedCount++;
                 }

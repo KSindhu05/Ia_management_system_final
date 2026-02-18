@@ -54,12 +54,17 @@ public class MarksService {
             if (existing.isPresent()) {
                 CieMark mark = existing.get();
                 mark.setMarks(payload.getMarks());
+                // Reset status to PENDING so faculty can re-submit (handles REJECTED re-edits)
+                mark.setStatus("PENDING");
                 cieMarkRepository.save(mark);
             } else {
-                // Determine status. If payload has status use it, else default PENDING
-                if (payload.getStatus() == null)
-                    payload.setStatus("PENDING");
-                cieMarkRepository.save(payload);
+                // Only create a new record if there are actual marks to save
+                // Don't create empty placeholders for cleared fields
+                if (payload.getMarks() != null) {
+                    if (payload.getStatus() == null)
+                        payload.setStatus("PENDING");
+                    cieMarkRepository.save(payload);
+                }
             }
         }
     }

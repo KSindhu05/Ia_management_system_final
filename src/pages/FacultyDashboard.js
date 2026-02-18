@@ -828,10 +828,22 @@ const FacultyDashboard = () => {
         Object.keys(marks).forEach(studentId => {
             const sMarks = marks[studentId];
             ['cie1', 'cie2', 'cie3', 'cie4', 'cie5'].forEach(key => {
+                // Skip locked CIE types — nothing to save for those
+                if (cieLockStatus[key]) return;
+
                 const val = sMarks[key];
-                // Only skip truly empty values (undefined, null, empty string)
-                // Allow 0 — faculty may intentionally enter 0 marks
-                if (val === undefined || val === null || val === '') return;
+
+                // If the field was cleared (empty string), send null to clear it in backend
+                if (val === '' || val === null || val === undefined) {
+                    payload.push({
+                        studentId: parseInt(studentId),
+                        subjectId: selectedSubject.id,
+                        iaType: key.toUpperCase(),
+                        co1: null,
+                        co2: 0
+                    });
+                    return;
+                }
 
                 let score = 0;
                 if (val === 'Ab') score = 0;

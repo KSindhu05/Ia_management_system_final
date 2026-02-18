@@ -75,6 +75,28 @@ const StudentDashboard = () => {
                         });
                         // Automatically set the filter to current semester
                         setSelectedSemester(s.semester.toString());
+                    } else {
+                        // No marks yet — fetch profile directly
+                        try {
+                            const profileRes = await fetch(`${API_BASE_URL}/student/profile`, {
+                                headers: { 'Authorization': `Bearer ${user.token}` }
+                            });
+                            if (profileRes.ok) {
+                                const s = await profileRes.json();
+                                setStudentInfo({
+                                    name: s.name || 'Student',
+                                    rollNo: s.regNo || user?.username || '...',
+                                    branch: s.department || '...',
+                                    semester: s.semester || '...',
+                                    cgpa: 0,
+                                    avgCieScore: '0/25',
+                                    parentPhone: s.parentPhone || ''
+                                });
+                                if (s.semester) setSelectedSemester(s.semester.toString());
+                            }
+                        } catch (profileErr) {
+                            console.error("Failed to fetch student profile", profileErr);
+                        }
                     }
                     const uniqueCIEs = new Set(data.map(m => m.cieType));
                     setCieStatus(`${uniqueCIEs.size}/5`);

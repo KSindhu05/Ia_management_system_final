@@ -46,10 +46,10 @@ public class CieService {
     }
 
     public List<Notification> getStudentNotifications(String username) {
-        // Retrieve notifications relevant to the student
-        // For now, return all notifications or filter by some logic
-        // Ideally, notifications should be targeted
-        return notificationRepository.findAll();
+        User user = userRepository.findByUsernameIgnoreCase(username).orElse(null);
+        if (user == null)
+            return List.of();
+        return notificationRepository.findByUserIdOrderByCreatedAtDesc(user.getId());
     }
 
     public List<Announcement> getFacultySchedules(String username) {

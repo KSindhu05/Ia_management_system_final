@@ -25,6 +25,10 @@ public class StudentService {
         return studentRepository.findAll();
     }
 
+    public java.util.Optional<Student> getStudentByRegNo(String regNo) {
+        return studentRepository.findByRegNo(regNo);
+    }
+
     public java.util.List<com.example.ia.payload.response.FacultyResponse> getFacultyForStudent(String username) {
         Student student = studentRepository.findByRegNo(username).orElse(null);
         if (student == null)

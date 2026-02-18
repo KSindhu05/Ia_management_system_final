@@ -127,7 +127,7 @@ public class CieController {
         User hod = userRepository.findByUsernameIgnoreCase(username).orElse(null);
         if (hod == null)
             return List.of();
-        return notificationRepository.findByUserDepartmentOrderByCreatedAtDesc(hod.getDepartment());
+        return notificationRepository.findByUserIdOrderByCreatedAtDesc(hod.getId());
     }
 
     // ========== HOD/PRINCIPAL CREATE ANNOUNCEMENTS ==========

@@ -112,4 +112,27 @@ public class NotificationController {
         notificationRepository.delete(notification);
         return ResponseEntity.ok(Map.of("message", "Notification deleted"));
     }
+
+    @PostMapping("/{id}/read")
+    @PreAuthorize("hasRole('STUDENT') or hasRole('FACULTY') or hasRole('HOD') or hasRole('PRINCIPAL')")
+    public ResponseEntity<?> markAsRead(@PathVariable Long id) {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByUsernameIgnoreCase(username).orElse(null);
+        if (user == null) {
+            return ResponseEntity.badRequest().body(Map.of("message", "User not found"));
+        }
+
+        Notification notification = notificationRepository.findById(id).orElse(null);
+        if (notification == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        if (!notification.getUser().getId().equals(user.getId())) {
+            return ResponseEntity.status(403).body(Map.of("message", "Access denied"));
+        }
+
+        notification.setRead(true);
+        notificationRepository.save(notification);
+        return ResponseEntity.ok(Map.of("message", "Marked as read"));
+    }
 }

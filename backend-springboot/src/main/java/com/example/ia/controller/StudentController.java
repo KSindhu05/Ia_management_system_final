@@ -26,4 +26,14 @@ public class StudentController {
                 .getAuthentication().getName();
         return studentService.getFacultyForStudent(username);
     }
+
+    @GetMapping("/profile")
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('STUDENT')")
+    public org.springframework.http.ResponseEntity<?> getProfile() {
+        String username = org.springframework.security.core.context.SecurityContextHolder.getContext()
+                .getAuthentication().getName();
+        return studentService.getStudentByRegNo(username)
+                .map(student -> org.springframework.http.ResponseEntity.ok((Object) student))
+                .orElse(org.springframework.http.ResponseEntity.notFound().build());
+    }
 }

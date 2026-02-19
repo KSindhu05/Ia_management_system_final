@@ -9,7 +9,7 @@ import {
 } from './Widgets';
 
 // Premium Hero Card Component
-const HeroStatCard = ({ label, value, icon: Icon, color, trend, gradient, customContent }) => (
+const HeroStatCard = ({ label, value, icon: Icon, color, trend, gradient, customContent, onClick }) => (
     <div style={{
         background: gradient || 'white',
         borderRadius: '24px',
@@ -21,10 +21,11 @@ const HeroStatCard = ({ label, value, icon: Icon, color, trend, gradient, custom
         justifyContent: 'space-between',
         height: '160px',
         transition: 'transform 0.3s ease, box-shadow 0.3s ease',
-        cursor: 'default',
+        cursor: onClick ? 'pointer' : 'default',
         position: 'relative',
         overflow: 'hidden'
     }}
+        onClick={onClick}
         onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-5px)'; e.currentTarget.style.boxShadow = '0 20px 40px -5px rgba(0,0,0,0.1)'; }}
         onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 10px 30px -5px rgba(0,0,0,0.05)'; }}
     >
@@ -67,7 +68,7 @@ const HeroStatCard = ({ label, value, icon: Icon, color, trend, gradient, custom
 
 const OverviewSection = memo(({
     stats, chartData, branches, branchPerformance, lowPerformers,
-    facultyAnalytics, schedule, approvals, cieStats, trends, hodSubmissionStatus
+    facultyAnalytics, schedule, approvals, cieStats, trends, hodSubmissionStatus, onNavigate
 }) => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', animation: 'fadeIn 0.6s ease-out' }}>
 
@@ -80,6 +81,7 @@ const OverviewSection = memo(({
                 color="#3b82f6"
                 trend="+5%"
                 gradient="linear-gradient(135deg, #eff6ff 0%, #ffffff 100%)"
+                onClick={() => onNavigate && onNavigate('directory')}
             />
             <HeroStatCard
                 label="Total Faculty"
@@ -88,6 +90,7 @@ const OverviewSection = memo(({
                 color="#8b5cf6"
                 trend="Stable"
                 gradient="linear-gradient(135deg, #f5f3ff 0%, #ffffff 100%)"
+                onClick={() => onNavigate && onNavigate('faculty')}
             />
             <HeroStatCard
                 label="Departments"
@@ -96,6 +99,7 @@ const OverviewSection = memo(({
                 color="#f59e0b"
                 trend="Active"
                 gradient="linear-gradient(135deg, #fffbeb 0%, #ffffff 100%)"
+                onClick={() => onNavigate && onNavigate('departments')}
             />
             <HeroStatCard
                 label="CIE Status"
@@ -103,6 +107,7 @@ const OverviewSection = memo(({
                 color="#10b981"
                 gradient="linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%)"
                 customContent={<CIEStatsWidget {...cieStats} />}
+                onClick={() => onNavigate && onNavigate('compliance')}
             />
         </div>
 
@@ -161,6 +166,7 @@ const OverviewSection = memo(({
                     <FacultyPerformanceWidget analytics={facultyAnalytics} />
                     <ScheduleWidget schedule={schedule} />
                 </div>
+                <LowPerformersWidget data={lowPerformers} />
             </div>
 
             {/* RIGHT COLUMN (Action Center & Approvals) */}
@@ -168,7 +174,6 @@ const OverviewSection = memo(({
                 <ActionCenter />
                 {/* FLOWCHART: PENDING CIE APPROVALS */}
                 <PendingApprovalsWidget approvals={approvals} />
-                <LowPerformersWidget data={lowPerformers} />
                 <FocusListWidget branches={branches} branchPerformance={branchPerformance} hodSubmissionStatus={hodSubmissionStatus} />
                 <YearComparisonWidget trends={trends} />
             </div>

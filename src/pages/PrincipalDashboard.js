@@ -54,6 +54,7 @@ const PrincipalDashboard = () => {
         const loadDashboardData = async () => {
             try {
                 const token = user?.token;
+                console.log("DEBUG: Fetching Principal Dashboard with token:", token ? "Present" : "Missing");
                 setLoading(true);
 
                 // Parallel fetching of all required data
@@ -81,8 +82,12 @@ const PrincipalDashboard = () => {
                 if (grievs) setGrievances(grievs);
 
             } catch (error) {
-                console.error("Failed to load dashboard data", error);
-                showToast("Failed to load live data", "error");
+                console.error("Failed to load dashboard data details:", error);
+                if (error.response) {
+                    console.error("Response status:", error.response.status);
+                    console.error("Response data:", await error.response.json());
+                }
+                showToast("Failed to load live data: " + error.message, "error");
             } finally {
                 setLoading(false);
             }
@@ -135,9 +140,9 @@ const PrincipalDashboard = () => {
             const hodInfo = dashboardData.hodSubmissionStatus?.find(h => h.dept === branch);
             return {
                 id: branch,
-                name: branch === 'CS' ? 'Computer Science' : branch === 'ME' ? 'Mechanical' : branch === 'EC' ? 'Electronics' : branch === 'CV' ? 'Civil' : branch,
+                name: (branch === 'CS' || branch === 'CSE') ? 'Computer Science' : branch === 'ME' ? 'Mechanical' : (branch === 'EC' || branch === 'ECE') ? 'Electronics' : branch === 'CV' ? 'Civil' : branch,
                 hod: hodInfo ? hodInfo.hod : 'Unknown',
-                color: branch === 'CS' ? '#3b82f6' : branch === 'ME' ? '#f59e0b' : branch === 'EC' ? '#8b5cf6' : '#10b981'
+                color: (branch === 'CS' || branch === 'CSE') ? '#3b82f6' : branch === 'ME' ? '#f59e0b' : (branch === 'EC' || branch === 'ECE') ? '#8b5cf6' : '#10b981'
             };
         });
     }, [dashboardData]);
@@ -193,12 +198,13 @@ const PrincipalDashboard = () => {
                             cieStats={dashboardData?.cieStats}
                             trends={dashboardData?.trends}
                             hodSubmissionStatus={dashboardData?.hodSubmissionStatus}
+                            onNavigate={setActiveTab}
                         />
                 )}
 
                 {activeTab === 'compliance' && <ComplianceSection hodSubmissionStatus={dashboardData?.hodSubmissionStatus} />}
 
-                {activeTab === 'departments' && <DepartmentSection departments={departments} />}
+                {activeTab === 'departments' && <DepartmentSection departments={departments} facultyList={facultyList} />}
 
                 {activeTab === 'directory' && <DirectorySection
                     departments={departments}

@@ -62,4 +62,29 @@ public class StudentService {
 
         return new java.util.ArrayList<>(facultyMap.values());
     }
+
+    @Autowired
+    private com.example.ia.repository.CieMarkRepository cieMarkRepository;
+
+    public List<com.example.ia.payload.response.StudentResponse> getStudentsWithAnalytics(String department) {
+        List<Student> students;
+        if (department != null && !department.equals("all")) {
+            students = studentRepository.findByDepartment(department);
+        } else {
+            students = studentRepository.findAll();
+        }
+
+        return students.stream().map(student -> {
+            List<com.example.ia.entity.CieMark> marksList = cieMarkRepository.findByStudent_Id(student.getId());
+            java.util.Map<String, Double> marksMap = new java.util.HashMap<>();
+
+            for (com.example.ia.entity.CieMark mark : marksList) {
+                // Determine key based on cieType (e.g., CIE1, CIE2)
+                String key = mark.getCieType().toLowerCase().replace(" ", "");
+                marksMap.put(key, mark.getMarks());
+            }
+
+            return new com.example.ia.payload.response.StudentResponse(student, marksMap);
+        }).collect(java.util.stream.Collectors.toList());
+    }
 }

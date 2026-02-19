@@ -34,7 +34,7 @@ const StudentProfileModal = ({ selectedStudentProfile, setSelectedStudentProfile
                         {s.name.charAt(0)}
                     </div>
                     <h2 style={{ margin: '0 0 0.5rem', color: '#0f172a' }}>{s.name}</h2>
-                    <p style={{ margin: 0, color: '#64748b' }}>{s.rollNo} | {selectedDept?.name} | {s.sem} Sem</p>
+                    <p style={{ margin: 0, color: '#64748b' }}>{s.regNo || s.rollNo} | {selectedDept?.name} | {s.semester || s.sem} Sem</p>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '2rem' }}>
@@ -153,11 +153,14 @@ export const DirectorySection = memo(({ departments = [], selectedDept, deptStud
             const matchesSem = semester === 'All' || s.semester == semester.replace(/\D/g, ''); // Extract number
             // const matchesSec = section === 'All' || s.section === section;
 
-            // Simplified risk calculation if marks not fully available in this payload
-            // Assuming API returns key stats or we default
-            const isAtRisk = true;
+            // Risk calculation: student is at risk if total CIE marks < 40% (16/40)
+            const totalMarks = (s.marks?.cie1 || 0) + (s.marks?.cie2 || 0);
+            const isAtRisk = totalMarks < 16;
 
-            return matchesSearch && matchesSem && isAtRisk;
+            // If filter is active, only show at-risk students; otherwise show all
+            const matchesRisk = showAtRisk ? isAtRisk : true;
+
+            return matchesSearch && matchesSem && matchesRisk;
         });
     }, [apiStudents, searchQuery, showAtRisk, semester, section]);
 
@@ -271,7 +274,18 @@ export const DirectorySection = memo(({ departments = [], selectedDept, deptStud
                         />
                     </div>
 
-
+                    <button
+                        onClick={() => setShowAtRisk(!showAtRisk)}
+                        style={{
+                            padding: '0.7rem 1rem', borderRadius: '10px',
+                            border: showAtRisk ? '2px solid #3b82f6' : '1px solid #e2e8f0',
+                            background: showAtRisk ? '#eff6ff' : 'white', color: showAtRisk ? '#2563eb' : '#0f172a',
+                            display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', cursor: 'pointer', fontWeight: 600,
+                            transition: 'all 0.2s'
+                        }}
+                    >
+                        <Filter size={16} /> {showAtRisk ? 'At Risk' : 'Filter'}
+                    </button>
                 </div>
 
                 <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
@@ -339,7 +353,7 @@ export const DirectorySection = memo(({ departments = [], selectedDept, deptStud
                             <th>Sem</th>
 
                             <th>CIE Performance</th>
-                            <th>Fees Status</th>
+
                             <th>Mentoring</th>
                             <th>Actions</th>
                         </tr>
@@ -352,11 +366,11 @@ export const DirectorySection = memo(({ departments = [], selectedDept, deptStud
                                         <input type="checkbox" checked={selectedStudents.includes(student.id)} onChange={() => handleSelectStudent(student.id)} />
                                     </td>
                                     <td style={{ color: '#64748b', fontWeight: 500 }}>{(currentPage - 1) * itemsPerPage + index + 1}</td>
-                                    <td>{student.rollNo}</td>
+                                    <td>{student.regNo || student.rollNo}</td>
                                     <td style={{ fontWeight: 600 }}>
                                         {student.name}
                                     </td>
-                                    <td>{student.sem}</td>
+                                    <td>{student.semester || student.sem}</td>
 
                                     <td>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -370,13 +384,7 @@ export const DirectorySection = memo(({ departments = [], selectedDept, deptStud
                                             <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{Math.round(((student.marks?.cie1 || 0) + (student.marks?.cie2 || 0)) / 40 * 100)}%</span>
                                         </div>
                                     </td>
-                                    <td>
-                                        {student.feesStatus === 'Paid' ? (
-                                            <span style={{ color: '#16a34a', fontWeight: 600, fontSize: '0.85rem' }}>Paid</span>
-                                        ) : (
-                                            <span style={{ color: '#ea580c', fontWeight: 600, fontSize: '0.85rem', background: '#ffedd5', padding: '2px 8px', borderRadius: '8px' }}>Pending</span>
-                                        )}
-                                    </td>
+
                                     <td>
                                         {student.mentoringStatus === 'Done' ? (
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#64748b', fontSize: '0.85rem' }}>
@@ -397,7 +405,7 @@ export const DirectorySection = memo(({ departments = [], selectedDept, deptStud
                             ))
                         ) : (
                             <tr>
-                                <td colSpan="9" style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>
+                                <td colSpan="8" style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>
                                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
                                         <Search size={32} color="#cbd5e1" />
                                         <p style={{ margin: 0 }}>No students found matching your filters.</p>

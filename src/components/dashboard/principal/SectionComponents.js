@@ -1,8 +1,26 @@
-import React, { memo } from 'react';
-import { Calendar, Download, Bell, FileText, Search, Plus, Briefcase, Clock } from 'lucide-react';
+import React, { memo, useState, useMemo } from 'react';
+
+import { Calendar, Download, Bell, FileText, Search, Plus, Briefcase, Clock, Mail, Phone, MapPin } from 'lucide-react';
+import { SimpleModal } from './Shared';
 import styles from '../../../pages/PrincipalDashboard.module.css';
 
 export const FacultyDirectorySection = memo(({ facultyMembers = [], onAdd }) => {
+    const [searchTerm, setSearchTerm] = useState('');
+    const [selectedDept, setSelectedDept] = useState('All Departments');
+    const [viewProfile, setViewProfile] = useState(null);
+
+    const filteredFaculty = useMemo(() => {
+        return facultyMembers.filter(f => {
+            const matchesSearch = (f.fullName || f.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (f.id || f.EmployeeID || '').toString().includes(searchTerm);
+            const matchesDept = selectedDept === 'All Departments' ||
+                (f.department || f.dept || f.Department) === selectedDept;
+            return matchesSearch && matchesDept;
+        });
+    }, [facultyMembers, searchTerm, selectedDept]);
+
+    const departments = useMemo(() => ['All Departments', ...new Set(facultyMembers.map(f => f.department || f.dept || f.Department).filter(Boolean))], [facultyMembers]);
+
     return (
         <div className={styles.sectionVisible}>
             {/* --- FACULTY BANNER --- */}
@@ -53,6 +71,8 @@ export const FacultyDirectorySection = memo(({ facultyMembers = [], onAdd }) => 
                     <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
                     <input
                         placeholder="Search Faculty..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
                         style={{
                             padding: '0.6rem 0.6rem 0.6rem 2.5rem', borderRadius: '10px',
                             border: '1px solid #e2e8f0', outline: 'none', width: '100%', fontSize: '0.9rem',
@@ -62,11 +82,14 @@ export const FacultyDirectorySection = memo(({ facultyMembers = [], onAdd }) => 
                 </div>
 
                 <div style={{ display: 'flex', gap: '1rem' }}>
-                    <select style={{ padding: '0.6rem 1rem', borderRadius: '10px', border: '1px solid #e2e8f0', outline: 'none', background: 'white', color: '#64748b' }}>
-                        <option>All Departments</option>
-                        <option>CS</option>
-                        <option>ME</option>
-                        <option>EC</option>
+                    <select
+                        value={selectedDept}
+                        onChange={(e) => setSelectedDept(e.target.value)}
+                        style={{ padding: '0.6rem 1rem', borderRadius: '10px', border: '1px solid #e2e8f0', outline: 'none', background: 'white', color: '#64748b' }}
+                    >
+                        {departments.map(dept => (
+                            <option key={dept} value={dept}>{dept}</option>
+                        ))}
                     </select>
                     <button
                         className={styles.primaryBtn}
@@ -93,23 +116,23 @@ export const FacultyDirectorySection = memo(({ facultyMembers = [], onAdd }) => 
                         </tr>
                     </thead>
                     <tbody>
-                        {facultyMembers.map((f, index) => (
+                        {filteredFaculty.map((f, index) => (
                             <tr key={f.id} style={{ transition: 'background 0.2s', cursor: 'default' }}>
                                 <td style={{ color: '#64748b', fontWeight: 500 }}>{index + 1}</td>
                                 <td style={{ fontFamily: 'monospace', color: '#64748b' }}>{f.id || f.EmployeeID}</td>
                                 <td>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                         <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#e0f2fe', color: '#0369a1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
-                                            {f.name ? f.name.charAt(0) : '?'}
+                                            {(f.fullName || f.name || '?').charAt(0)}
                                         </div>
                                         <div>
-                                            <div style={{ fontWeight: 600, color: '#0f172a' }}>{f.name}</div>
+                                            <div style={{ fontWeight: 600, color: '#0f172a' }}>{f.fullName || f.name}</div>
                                             <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{f.qualifications || f.Qualification}</div>
                                         </div>
                                     </div>
                                 </td>
                                 <td>
-                                    <span style={{ padding: '4px 8px', borderRadius: '6px', background: '#f1f5f9', fontWeight: 600, fontSize: '0.85rem' }}>{f.dept || f.Department}</span>
+                                    <span style={{ padding: '4px 8px', borderRadius: '6px', background: '#f1f5f9', fontWeight: 600, fontSize: '0.85rem' }}>{f.department || f.dept || f.Department}</span>
                                 </td>
                                 <td>{f.designation || f.Designation}</td>
                                 <td>
@@ -130,13 +153,77 @@ export const FacultyDirectorySection = memo(({ facultyMembers = [], onAdd }) => 
                                     </span>
                                 </td>
                                 <td>
-                                    <button className={styles.secondaryBtn} style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}>View Profile</button>
+                                    <button
+                                        className={styles.secondaryBtn}
+                                        style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
+                                        onClick={() => setViewProfile(f)}
+                                    >
+                                        View Profile
+                                    </button>
                                 </td>
                             </tr>
                         ))}
+                        {filteredFaculty.length === 0 && (
+                            <tr>
+                                <td colSpan="8" style={{ textAlign: 'center', padding: '2rem', color: '#64748b' }}>
+                                    No faculty found matching your criteria.
+                                </td>
+                            </tr>
+                        )}
                     </tbody>
                 </table>
             </div>
+
+            {/* --- PROFILE MODAL --- */}
+            <SimpleModal isOpen={!!viewProfile} onClose={() => setViewProfile(null)} title="Faculty Profile">
+                {viewProfile && (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.5rem', textAlign: 'center' }}>
+                        <div style={{
+                            width: '100px', height: '100px', borderRadius: '50%', background: '#f8fafc',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2.5rem',
+                            fontWeight: 800, color: '#334155', border: '4px solid #e2e8f0'
+                        }}>
+                            {(viewProfile.fullName || viewProfile.name || '?').charAt(0)}
+                        </div>
+                        <div>
+                            <h2 style={{ margin: '0 0 0.5rem 0', color: '#0f172a' }}>{viewProfile.fullName || viewProfile.name}</h2>
+                            <p style={{ margin: 0, color: '#64748b', fontWeight: 500 }}>{viewProfile.designation || viewProfile.Designation} - {viewProfile.department || viewProfile.dept || viewProfile.Department}</p>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', width: '100%' }}>
+                            <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '12px', textAlign: 'left' }}>
+                                <p style={{ margin: '0 0 0.5rem', fontSize: '0.8rem', color: '#94a3b8' }}>Employee ID</p>
+                                <p style={{ margin: 0, fontWeight: 600 }}>{viewProfile.id || viewProfile.EmployeeID}</p>
+                            </div>
+                            <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '12px', textAlign: 'left' }}>
+                                <p style={{ margin: '0 0 0.5rem', fontSize: '0.8rem', color: '#94a3b8' }}>Qualification</p>
+                                <p style={{ margin: 0, fontWeight: 600 }}>{viewProfile.qualifications || viewProfile.Qualification}</p>
+                            </div>
+                            <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '12px', textAlign: 'left', gridColumn: 'span 2' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.5rem' }}>
+                                    <Mail size={16} color="#64748b" />
+                                    <span style={{ fontSize: '0.9rem', color: '#475569' }}>{viewProfile.email || 'Email not provided'}</span>
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <Phone size={16} color="#64748b" />
+                                    <span style={{ fontSize: '0.9rem', color: '#475569' }}>{viewProfile.phone || 'Phone not provided'}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style={{ width: '100%', borderTop: '1px solid #e2e8f0', paddingTop: '1.5rem', marginTop: '0.5rem' }}>
+                            <h4 style={{ margin: '0 0 1rem', textAlign: 'left' }}>Assigned Subjects</h4>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                                {(viewProfile.subjects || 'No subjects assigned').split(',').map((sub, idx) => (
+                                    <span key={idx} style={{ padding: '4px 10px', background: '#dbeafe', color: '#1e40af', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 600 }}>
+                                        {sub.trim()}
+                                    </span>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </SimpleModal>
         </div>
     );
 });

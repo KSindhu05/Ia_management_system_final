@@ -1,6 +1,5 @@
 package com.example.ia.controller;
 
-import com.example.ia.entity.Student;
 import com.example.ia.service.StudentService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -15,8 +14,9 @@ public class StudentController {
     StudentService studentService;
 
     @GetMapping("/all")
-    public List<Student> getAllStudents(@RequestParam(required = false) String department) {
-        return studentService.getAllStudents(department);
+    public List<com.example.ia.payload.response.StudentResponse> getAllStudents(
+            @RequestParam(required = false) String department) {
+        return studentService.getStudentsWithAnalytics(department);
     }
 
     @GetMapping("/faculty")

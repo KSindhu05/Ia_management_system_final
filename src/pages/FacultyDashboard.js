@@ -23,7 +23,7 @@ const FacultyDashboard = () => {
     const [selectedSubject, setSelectedSubject] = useState(null);
     const [marks, setMarks] = useState({}); // Map { studentId: { co1: val... } }
     const [isLocked, setIsLocked] = useState(false); // For Commit/Edit workflow
-    const [cieLockStatus, setCieLockStatus] = useState({ cie1: true, cie2: true, cie3: true, cie4: true, cie5: true }); // Per-CIE lock
+    const [cieLockStatus, setCieLockStatus] = useState({ cie1: false, cie2: false, cie3: false, cie4: false, cie5: false }); // Per-CIE lock
     const [saving, setSaving] = useState(false);
     const [showPreview, setShowPreview] = useState(false);
     const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
@@ -465,8 +465,8 @@ const FacultyDashboard = () => {
             return;
         }
 
-        if (!iaConfig.date) {
-            showToast('CIE has not been scheduled by HOD yet.', 'error');
+        if (!iaConfig.syllabus || !iaConfig.syllabus.trim()) {
+            showToast('Please enter syllabus topics', 'error');
             return;
         }
 
@@ -477,31 +477,24 @@ const FacultyDashboard = () => {
                 ...(token ? { 'Authorization': `Bearer ${token}` } : {})
             };
 
-            const baseUrl = API_BASE.replace('/marks', '');
-
             const payload = {
-                subjectId: iaConfig.subjectId, // Added subjectId to body
+                subjectId: iaConfig.subjectId,
                 cieNumber: parseInt(iaConfig.cieNumber),
-                scheduledDate: iaConfig.date || null,
-                durationMinutes: parseInt(iaConfig.duration) || 60,
-                syllabusCoverage: iaConfig.syllabus,
-                instructions: iaConfig.instructions,
-                examRoom: iaConfig.room,
-                startTime: iaConfig.time || null
+                syllabusCoverage: iaConfig.syllabus
             };
 
-            const response = await fetch(`${API_BASE_URL}/cie/faculty/announcements`, { // Removed query param
-                method: 'POST',
+            const response = await fetch(`${API_BASE_URL}/cie/faculty/announcements/syllabus`, {
+                method: 'PUT',
                 headers,
                 body: JSON.stringify(payload)
             });
 
             if (response.ok) {
-                const updatedAnn = await response.json(); // Backend returns the Announcement object directly
+                const updatedAnn = await response.json();
 
-                // Update local state to reflect changes immediately
+                // Update local state to reflect the syllabus change
                 setPublishedSchedules(prev => {
-                    const ann = updatedAnn.announcement || updatedAnn; // Handle both wrapped and direct response (fallback)
+                    const ann = updatedAnn.announcement || updatedAnn;
                     if (!ann || !ann.id) return prev;
 
                     const existingIndex = prev.findIndex(s => s.id === ann.id);
@@ -510,16 +503,17 @@ const FacultyDashboard = () => {
                         newScheds[existingIndex] = { ...newScheds[existingIndex], ...ann };
                         return newScheds;
                     }
-                    return [...prev, ann];
+                    return prev; // Don't add new — only update existing
                 });
 
                 showToast(`Syllabus for CIE-${iaConfig.cieNumber} Updated!`, 'success');
             } else {
-                showToast('Failed to post announcement', 'error');
+                const err = await response.json().catch(() => ({ message: 'Failed to update syllabus' }));
+                showToast(err.message || 'Failed to update syllabus', 'error');
             }
         } catch (error) {
             console.error(error);
-            showToast('Failed to post announcement', 'error');
+            showToast('Failed to update syllabus', 'error');
         }
     };
 
@@ -645,7 +639,7 @@ const FacultyDashboard = () => {
         setActiveSection('CIE Entry');
         setMarks({}); // Clear previous
         setIsLocked(false);
-        setCieLockStatus({ cie1: true, cie2: true, cie3: true, cie4: true, cie5: true }); // Lock all by default
+        setCieLockStatus({ cie1: false, cie2: false, cie3: false, cie4: false, cie5: false }); // All unlocked by default
 
         try {
             const token = user?.token;
@@ -702,34 +696,9 @@ const FacultyDashboard = () => {
 
                 console.log('CIE Statuses:', cieStatuses);
 
-                // Determine per-CIE lock status:
-                // A CIE is EDITABLE (unlocked) only if it has PENDING marks
-                // A CIE is LOCKED if it has APPROVED/SUBMITTED marks or no marks at all
-                const newLockStatus = {};
-                ['cie1', 'cie2', 'cie3', 'cie4', 'cie5'].forEach(cie => {
-                    if (cieStatuses[cie].size === 0) {
-                        // No marks exist for this CIE — locked (HOD hasn't opened it)
-                        newLockStatus[cie] = true;
-                    } else if (cieStatuses[cie].has('APPROVED')) {
-                        // HOD approved — locked
-                        newLockStatus[cie] = true;
-                    } else if (cieStatuses[cie].has('SUBMITTED')) {
-                        // Faculty submitted, waiting for HOD — locked
-                        newLockStatus[cie] = true;
-                    } else {
-                        // PENDING status — editable
-                        newLockStatus[cie] = false;
-                    }
-                });
-                setCieLockStatus(newLockStatus);
-
-                // Overall lock: if ALL CIEs with data are locked
-                const hasAnyEditable = Object.values(newLockStatus).some(v => !v);
-                setIsLocked(!hasAnyEditable);
-
-                if (!hasAnyEditable && data.length > 0) {
-                    showToast('All CIE marks are locked/approved', 'info');
-                }
+                // All CIEs are always editable (no lock logic)
+                setCieLockStatus({ cie1: false, cie2: false, cie3: false, cie4: false, cie5: false });
+                setIsLocked(false);
 
                 setMarks(newMarks);
             }
@@ -1767,11 +1736,11 @@ const FacultyDashboard = () => {
                                     <th>Sl No</th>
                                     <th>Reg No</th>
                                     <th>Student Name</th>
-                                    <th>CIE-1 (50) {cieLockStatus.cie1 ? '🔒' : '✏️'}</th>
-                                    <th>CIE-2 (50) {cieLockStatus.cie2 ? '🔒' : '✏️'}</th>
-                                    <th>CIE-3 (50) {cieLockStatus.cie3 ? '🔒' : '✏️'}</th>
-                                    <th>CIE-4 (50) {cieLockStatus.cie4 ? '🔒' : '✏️'}</th>
-                                    <th>CIE-5 (50) {cieLockStatus.cie5 ? '🔒' : '✏️'}</th>
+                                    <th>CIE-1 (50)</th>
+                                    <th>CIE-2 (50)</th>
+                                    <th>CIE-3 (50)</th>
+                                    <th>CIE-4 (50)</th>
+                                    <th>CIE-5 (50)</th>
 
                                     <th>Total (250)</th>
                                 </tr>
@@ -1804,9 +1773,7 @@ const FacultyDashboard = () => {
                                                         className={styles.markInput}
                                                         value={valCIE1}
                                                         onChange={(e) => handleMarkChange(student.id, 'cie1', e.target.value)}
-                                                        disabled={cieLockStatus.cie1}
-                                                        placeholder={cieLockStatus.cie1 ? '🔒' : ''}
-                                                        style={cieLockStatus.cie1 ? { background: '#f1f5f9', color: '#64748b', cursor: 'not-allowed' } : {}}
+                                                        placeholder=""
                                                     />
                                                 </td>
                                                 <td>
@@ -1815,9 +1782,7 @@ const FacultyDashboard = () => {
                                                         className={styles.markInput}
                                                         value={valCIE2}
                                                         onChange={(e) => handleMarkChange(student.id, 'cie2', e.target.value)}
-                                                        disabled={cieLockStatus.cie2}
-                                                        placeholder={cieLockStatus.cie2 ? '🔒' : ''}
-                                                        style={cieLockStatus.cie2 ? { background: '#f1f5f9', color: '#64748b', cursor: 'not-allowed' } : {}}
+                                                        placeholder=""
                                                     />
                                                 </td>
                                                 <td>
@@ -1826,9 +1791,7 @@ const FacultyDashboard = () => {
                                                         className={styles.markInput}
                                                         value={valCIE3}
                                                         onChange={(e) => handleMarkChange(student.id, 'cie3', e.target.value)}
-                                                        disabled={cieLockStatus.cie3}
-                                                        placeholder={cieLockStatus.cie3 ? '🔒' : ''}
-                                                        style={cieLockStatus.cie3 ? { background: '#f1f5f9', color: '#64748b', cursor: 'not-allowed' } : {}}
+                                                        placeholder=""
                                                     />
                                                 </td>
                                                 <td>
@@ -1837,9 +1800,7 @@ const FacultyDashboard = () => {
                                                         className={styles.markInput}
                                                         value={valCIE4}
                                                         onChange={(e) => handleMarkChange(student.id, 'cie4', e.target.value)}
-                                                        disabled={cieLockStatus.cie4}
-                                                        placeholder={cieLockStatus.cie4 ? '🔒' : ''}
-                                                        style={cieLockStatus.cie4 ? { background: '#f1f5f9', color: '#64748b', cursor: 'not-allowed' } : {}}
+                                                        placeholder=""
                                                     />
                                                 </td>
                                                 <td>
@@ -1848,9 +1809,7 @@ const FacultyDashboard = () => {
                                                         className={styles.markInput}
                                                         value={valCIE5}
                                                         onChange={(e) => handleMarkChange(student.id, 'cie5', e.target.value)}
-                                                        disabled={cieLockStatus.cie5}
-                                                        placeholder={cieLockStatus.cie5 ? '🔒' : ''}
-                                                        style={cieLockStatus.cie5 ? { background: '#f1f5f9', color: '#64748b', cursor: 'not-allowed' } : {}}
+                                                        placeholder=""
                                                     />
                                                 </td>
 
@@ -2212,8 +2171,6 @@ const FacultyDashboard = () => {
                     {/* Left Column: Form */}
                     <div className={styles.leftColumn} style={{ flex: 2 }}>
                         <div className={styles.glassCard}>
-                            <h2 className={styles.sectionTitle}>CIE Details (Scheduled by HOD)</h2>
-
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                                 {/* Subject & CIE Select */}
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
@@ -2245,7 +2202,6 @@ const FacultyDashboard = () => {
                                                         padding: '8px',
                                                         borderRadius: '8px',
                                                         border: 'none',
-                                                        // Using Blue (#2563eb) for active state
                                                         background: iaConfig.cieNumber === num ? '#2563eb' : 'transparent',
                                                         color: iaConfig.cieNumber === num ? 'white' : '#64748b',
                                                         fontWeight: 600,
@@ -2260,37 +2216,6 @@ const FacultyDashboard = () => {
                                             ))}
                                         </div>
                                     </div>
-                                </div>
-
-                                {/* Read-Only Schedule Info */}
-                                <div style={{ background: '#f1f5f9', padding: '1rem', borderRadius: '10px', border: '1px dashed #cbd5e1' }}>
-                                    <h4 style={{ margin: '0 0 1rem 0', color: '#475569', fontSize: '0.9rem', textTransform: 'uppercase' }}>Schedule (Read Only)</h4>
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1rem' }}>
-                                        <div>
-                                            <span style={{ display: 'block', fontSize: '0.8rem', color: '#64748b' }}>Date</span>
-                                            <span style={{ fontWeight: 600, color: '#1e293b' }}>{iaConfig.subjectId ? currentSchedule.date : '-'}</span>
-                                        </div>
-                                        <div>
-                                            <span style={{ display: 'block', fontSize: '0.8rem', color: '#64748b' }}>Time</span>
-                                            <span style={{ fontWeight: 600, color: '#1e293b' }}>{iaConfig.subjectId ? currentSchedule.time : '-'}</span>
-                                        </div>
-                                        <div>
-                                            <span style={{ display: 'block', fontSize: '0.8rem', color: '#64748b' }}>Duration</span>
-                                            <span style={{ fontWeight: 600, color: '#1e293b' }}>{iaConfig.subjectId ? currentSchedule.duration : '-'}</span>
-                                        </div>
-                                        <div>
-                                            <span style={{ display: 'block', fontSize: '0.8rem', color: '#64748b' }}>Room</span>
-                                            <span style={{ fontWeight: 600, color: '#1e293b' }}>{iaConfig.subjectId ? currentSchedule.room : '-'}</span>
-                                        </div>
-                                    </div>
-                                    {iaConfig.instructions && (
-                                        <div style={{ marginTop: '1rem', borderTop: '1px dashed #cbd5e1', paddingTop: '0.75rem' }}>
-                                            <span style={{ display: 'block', fontSize: '0.8rem', color: '#64748b', marginBottom: '4px' }}>Instructions from HOD:</span>
-                                            <p style={{ fontSize: '0.9rem', color: '#334155', fontStyle: 'italic', margin: 0 }}>
-                                                "{iaConfig.instructions}"
-                                            </p>
-                                        </div>
-                                    )}
                                 </div>
 
                                 {/* Syllabus */}

@@ -221,6 +221,24 @@ public class HodController {
             alerts.add(alert);
         }
 
+        // === Compute aggregate stats ===
+        double deptAvg = 0;
+        double deptPassRate = 0;
+        int subjectsWithData = 0;
+        for (Map<String, Object> sp : subjectPerfList) {
+            double overall = ((Number) sp.get("overall")).doubleValue();
+            double passRate = ((Number) sp.get("passRate")).doubleValue();
+            if (overall > 0) {
+                deptAvg += overall;
+                deptPassRate += passRate;
+                subjectsWithData++;
+            }
+        }
+        if (subjectsWithData > 0) {
+            deptAvg = Math.round((deptAvg / subjectsWithData) * 10.0) / 10.0;
+            deptPassRate = Math.round((deptPassRate / subjectsWithData) * 10.0) / 10.0;
+        }
+
         // === Build response ===
         Map<String, Object> data = new HashMap<>();
         data.put("totalStudents", students.size());
@@ -230,6 +248,9 @@ public class HodController {
         data.put("gradeDistribution", gradeDistribution);
         data.put("alerts", alerts);
         data.put("atRiskStudents", atRiskStudentsList);
+        data.put("deptAverage", deptAvg);
+        data.put("passPercentage", Math.min(100, deptPassRate));
+        data.put("atRiskCount", atRiskStudentsList.size());
         return ResponseEntity.ok(data);
     }
 

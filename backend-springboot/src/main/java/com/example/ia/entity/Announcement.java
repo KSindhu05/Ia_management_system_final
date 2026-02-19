@@ -21,6 +21,9 @@ public class Announcement {
     private String examRoom;
     private String status; // SCHEDULED, COMPLETED
 
+    @Column(length = 2000)
+    private String syllabusCoverage; // Topics entered by faculty
+
     @ManyToOne
     @JoinColumn(name = "faculty_id")
     private User faculty;
@@ -98,5 +101,13 @@ public class Announcement {
 
     public void setFaculty(User faculty) {
         this.faculty = faculty;
+    }
+
+    public String getSyllabusCoverage() {
+        return syllabusCoverage;
+    }
+
+    public void setSyllabusCoverage(String syllabusCoverage) {
+        this.syllabusCoverage = syllabusCoverage;
     }
 }

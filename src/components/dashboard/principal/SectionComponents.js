@@ -1,10 +1,10 @@
 import React, { memo, useState, useMemo } from 'react';
 
-import { Calendar, Download, Bell, FileText, Search, Plus, Briefcase, Clock, Mail, Phone, MapPin } from 'lucide-react';
+import { Calendar, Download, Bell, FileText, Search, UserMinus, Briefcase, Clock, Mail, Phone, MapPin, Building, UserCheck, AlertTriangle, X, Trash2, Send } from 'lucide-react';
 import { SimpleModal } from './Shared';
 import styles from '../../../pages/PrincipalDashboard.module.css';
 
-export const FacultyDirectorySection = memo(({ facultyMembers = [], onAdd }) => {
+export const FacultyDirectorySection = memo(({ facultyMembers = [], onRemove }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedDept, setSelectedDept] = useState('All Departments');
     const [viewProfile, setViewProfile] = useState(null);
@@ -93,10 +93,10 @@ export const FacultyDirectorySection = memo(({ facultyMembers = [], onAdd }) => 
                     </select>
                     <button
                         className={styles.primaryBtn}
-                        onClick={onAdd}
-                        style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '0.6rem 1.2rem' }}
+                        onClick={onRemove}
+                        style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '0.6rem 1.2rem', background: '#ef4444' }}
                     >
-                        <Plus size={18} /> Add Faculty
+                        <UserMinus size={18} /> Remove Faculty
                     </button>
                 </div>
             </div>
@@ -110,8 +110,7 @@ export const FacultyDirectorySection = memo(({ facultyMembers = [], onAdd }) => 
                             <th>Name</th>
                             <th>Department</th>
                             <th>Designation</th>
-                            <th>Workload</th>
-                            <th>Status</th>
+
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -135,23 +134,7 @@ export const FacultyDirectorySection = memo(({ facultyMembers = [], onAdd }) => 
                                     <span style={{ padding: '4px 8px', borderRadius: '6px', background: '#f1f5f9', fontWeight: 600, fontSize: '0.85rem' }}>{f.department || f.dept || f.Department}</span>
                                 </td>
                                 <td>{f.designation || f.Designation}</td>
-                                <td>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                        <Clock size={14} color="#64748b" />
-                                        {f.workload || '0 Hrs/Wk'}
-                                    </div>
-                                </td>
-                                <td>
-                                    <span style={{
-                                        padding: '4px 10px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 600,
-                                        background: (f.status === 'Active' || !f.status) ? '#dcfce7' : '#fee2e2',
-                                        color: (f.status === 'Active' || !f.status) ? '#166534' : '#991b1b',
-                                        display: 'inline-flex', alignItems: 'center', gap: '4px'
-                                    }}>
-                                        <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'currentColor' }}></div>
-                                        {f.status || 'Active'}
-                                    </span>
-                                </td>
+
                                 <td>
                                     <button
                                         className={styles.secondaryBtn}
@@ -165,7 +148,7 @@ export const FacultyDirectorySection = memo(({ facultyMembers = [], onAdd }) => 
                         ))}
                         {filteredFaculty.length === 0 && (
                             <tr>
-                                <td colSpan="8" style={{ textAlign: 'center', padding: '2rem', color: '#64748b' }}>
+                                <td colSpan="6" style={{ textAlign: 'center', padding: '2rem', color: '#64748b' }}>
                                     No faculty found matching your criteria.
                                 </td>
                             </tr>
@@ -228,34 +211,123 @@ export const FacultyDirectorySection = memo(({ facultyMembers = [], onAdd }) => 
     );
 });
 
-export const TimetablesSection = memo(({ timetables = [], onDownload }) => {
+export const CIEScheduleSection = memo(({ schedules = [], onDownload }) => {
+    const [selectedDept, setSelectedDept] = useState(null);
+    const departments = ['CSE', 'MECH', 'EEE', 'CV', 'MT'];
+
+    const filteredSchedules = useMemo(() => {
+        if (!selectedDept) return [];
+        return schedules.filter(s => s.subject?.department === selectedDept);
+    }, [schedules, selectedDept]);
+
+    if (!selectedDept) {
+        return (
+            <div className={styles.sectionVisible}>
+                <h2 className={styles.chartTitle} style={{ marginBottom: '1.5rem' }}>Select Department for CIE Schedule</h2>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '2rem' }}>
+                    {departments.map(dept => (
+                        <div
+                            key={dept}
+                            className={styles.glassCard}
+                            onClick={() => setSelectedDept(dept)}
+                            style={{
+                                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                                padding: '3rem', cursor: 'pointer', transition: 'all 0.2s', border: '1px solid #e2e8f0',
+                                minHeight: '220px'
+                            }}
+                            onMouseOver={(e) => { e.currentTarget.style.borderColor = '#0ea5e9'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
+                            onMouseOut={(e) => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.transform = 'translateY(0)'; }}
+                        >
+                            <div style={{ padding: '1rem', borderRadius: '50%', background: '#e0f2fe', color: '#0369a1', marginBottom: '1rem' }}>
+                                <Building size={32} />
+                            </div>
+                            <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: '#0f172a' }}>{dept}</h3>
+                            <p style={{ margin: '0.5rem 0 0 0', color: '#64748b', fontSize: '0.9rem' }}>View Schedules</p>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className={styles.sectionVisible}>
-            <h2 className={styles.chartTitle} style={{ marginBottom: '1.5rem' }}>Master Timetables</h2>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
-                {timetables.map(t => (
-                    <div key={t.id} className={styles.glassCard} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '2rem' }}>
-                        <div style={{ padding: '1rem', borderRadius: '50%', background: '#e0f2fe', color: '#0ea5e9', marginBottom: '1rem' }}>
-                            <Calendar size={32} />
-                        </div>
-                        <h3 style={{ margin: '0 0 0.5rem 0', fontWeight: 700, color: '#0f172a' }}>{t.dept || 'Department'}</h3>
-                        <p style={{ margin: 0, fontSize: '1rem', color: '#64748b', fontWeight: 500 }}>{t.semester || 'Semester'}</p>
-                        <p style={{ margin: '0.5rem 0 1.5rem 0', fontSize: '0.8rem', color: '#94a3b8' }}>Updated {t.updated || 'Recently'}</p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
+                <button
+                    onClick={() => setSelectedDept(null)}
+                    style={{
+                        padding: '0.5rem 1rem', borderRadius: '8px', border: '1px solid #e2e8f0',
+                        background: 'white', color: '#475569', cursor: 'pointer', fontWeight: 500
+                    }}
+                >
+                    &larr; Back
+                </button>
+                <h2 className={styles.chartTitle} style={{ margin: 0 }}>{selectedDept} - CIE Examination Schedules</h2>
+            </div>
 
-                        <button
-                            onClick={() => onDownload(t)}
-                            style={{
-                                display: 'flex', alignItems: 'center', gap: '8px',
-                                padding: '0.6rem 1.2rem', borderRadius: '8px',
-                                border: '1px solid #e2e8f0', background: 'white',
-                                color: '#475569', cursor: 'pointer', transition: 'all 0.2s',
-                                fontWeight: 500
-                            }}
-                            onMouseOver={(e) => { e.currentTarget.style.borderColor = '#0ea5e9'; e.currentTarget.style.color = '#0ea5e9'; }}
-                            onMouseOut={(e) => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.color = '#475569'; }}
-                        >
-                            <Download size={16} /> Download PDF
-                        </button>
+            {/* DEBUG INFO - Remove after fixing */}
+            <div style={{ padding: '10px', background: '#fff0f0', color: '#dc2626', marginBottom: '1rem', borderRadius: '8px', fontSize: '0.8rem' }}>
+                <strong>Debug Info:</strong> Total Schedules Fetched: {schedules.length} <br />
+                Available Departments in Data: {[...new Set(schedules.map(s => s.subject ? s.subject.department : 'No Subject'))].join(', ')}
+            </div>
+
+            {/* Empty State */}
+            {filteredSchedules.length === 0 && (
+                <div style={{ padding: '3rem', textAlign: 'center', color: '#64748b', background: 'white', borderRadius: '12px', border: '1px dashed #cbd5e1' }}>
+                    <Calendar size={48} style={{ marginBottom: '1rem', opacity: 0.5 }} />
+                    <p style={{ fontSize: '1.1rem', fontWeight: 500 }}>No exams scheduled for {selectedDept}.</p>
+                </div>
+            )}
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
+                {filteredSchedules.map(t => (
+                    <div key={t.id} className={styles.glassCard} style={{ display: 'flex', flexDirection: 'column', padding: '1.5rem', position: 'relative', borderLeft: '4px solid #0ea5e9' }}>
+
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+                            <div>
+                                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: '#0f172a' }}>
+                                    {t.subject ? t.subject.name : 'Unknown Subject'}
+                                </h3>
+                                <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: '#64748b', fontWeight: 500 }}>
+                                    {t.cieNumber} | {t.subject?.code}
+                                </p>
+                            </div>
+                            <span style={{
+                                padding: '4px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600,
+                                background: t.status === 'COMPLETED' ? '#dcfce7' : '#e0f2fe',
+                                color: t.status === 'COMPLETED' ? '#166534' : '#0369a1'
+                            }}>
+                                {t.status || 'SCHEDULED'}
+                            </span>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.8rem', fontSize: '0.9rem', color: '#334155' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <Calendar size={16} color="#64748b" />
+                                <span style={{ fontWeight: 500 }}>{t.scheduledDate || 'Date TBD'}</span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <Clock size={16} color="#64748b" />
+                                <span>{t.startTime || 'Time TBD'} ({t.durationMinutes || 60} min)</span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <MapPin size={16} color="#64748b" />
+                                <span>Room: {t.examRoom || 'TBD'}</span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <Building size={16} color="#64748b" />
+                                <span>{t.subject?.department} - Sem {t.subject?.semester}</span>
+                            </div>
+                        </div>
+
+                        <div style={{ marginTop: '1.2rem', paddingTop: '1rem', borderTop: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', color: '#64748b' }}>
+                            <UserCheck size={14} />
+                            <span>
+                                Scheduled by: <span style={{ fontWeight: 600, color: '#475569' }}>
+                                    {t.faculty ? t.faculty.username : 'Unknown'}
+                                </span>
+                            </span>
+                        </div>
                     </div>
                 ))}
             </div>
@@ -263,27 +335,122 @@ export const TimetablesSection = memo(({ timetables = [], onDownload }) => {
     );
 });
 
-export const CircularsSection = memo(({ circulars = [], onNewBroadcast }) => (
+export const NotificationsSection = memo(({
+    notifications = [],
+    recipientType = 'HOD',
+    setRecipientType,
+    targetDept = 'ALL',
+    setTargetDept,
+    messageText = '',
+    setMessageText,
+    onSend,
+    onClear,
+    onDelete
+}) => (
     <div className={styles.sectionVisible}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-            <h2 className={styles.chartTitle}>Circulars & Broadcasts</h2>
-            <button className={styles.primaryBtn} style={{ background: '#7c3aed' }} onClick={onNewBroadcast}>+ New Broadcast</button>
+            <h2 className={styles.chartTitle}>Notifications</h2>
         </div>
-        <div className={styles.glassCard}>
-            {circulars.map(c => (
-                <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem', borderBottom: '1px solid #f1f5f9' }}>
-                    <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                        <div style={{ padding: '0.5rem', background: '#f5f3ff', borderRadius: '8px', color: '#7c3aed' }}>
-                            <Bell size={20} />
-                        </div>
-                        <div>
-                            <h4 style={{ margin: '0 0 0.25rem 0' }}>{c.title}</h4>
-                            <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>Target: {c.target} | Date: {c.date}</p>
-                        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+            {/* Send Message Form */}
+            <div className={styles.glassCard} style={{ padding: '1.5rem' }}>
+                <h3 style={{ margin: '0 0 1.25rem 0', fontSize: '1.1rem', fontWeight: 600, color: '#1e293b' }}>Send Message</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    <div>
+                        <label style={{ fontWeight: 600, display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: '#374151' }}>Recipient Group</label>
+                        <select
+                            value={recipientType}
+                            onChange={(e) => setRecipientType && setRecipientType(e.target.value)}
+                            style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid #e5e7eb', fontSize: '0.9rem', background: 'white' }}
+                        >
+                            <option value="HOD">All HODs</option>
+                            <option value="FACULTY">All Faculty</option>
+                            <option value="STUDENT">All Students</option>
+                        </select>
                     </div>
-                    <span style={{ padding: '4px 10px', background: '#dcfce7', color: '#16a34a', borderRadius: '12px', fontSize: '0.8rem' }}>{c.status}</span>
+                    <div>
+                        <label style={{ fontWeight: 600, display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: '#374151' }}>Target Department</label>
+                        <select
+                            value={targetDept}
+                            onChange={(e) => setTargetDept && setTargetDept(e.target.value)}
+                            style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid #e5e7eb', fontSize: '0.9rem', background: 'white' }}
+                        >
+                            <option value="ALL">All Departments</option>
+                            <option value="CSE">CSE</option>
+                            <option value="ECE">ECE</option>
+                            <option value="ME">ME</option>
+                            <option value="CV">CV</option>
+                            <option value="ISE">ISE</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style={{ fontWeight: 600, display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: '#374151' }}>Message</label>
+                        <textarea
+                            rows="5"
+                            placeholder="Type your message here..."
+                            value={messageText}
+                            onChange={(e) => setMessageText && setMessageText(e.target.value)}
+                            style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid #e5e7eb', fontSize: '0.9rem', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box' }}
+                        />
+                    </div>
+                    <button
+                        onClick={onSend}
+                        disabled={!messageText.trim()}
+                        style={{
+                            alignSelf: 'flex-start', display: 'flex', alignItems: 'center', gap: '0.5rem',
+                            padding: '0.65rem 1.5rem', borderRadius: '0.5rem', border: 'none',
+                            background: messageText.trim() ? '#2563eb' : '#94a3b8', color: 'white',
+                            fontWeight: 600, fontSize: '0.9rem', cursor: messageText.trim() ? 'pointer' : 'not-allowed',
+                            transition: 'background 0.2s'
+                        }}
+                    >
+                        <Send size={16} /> Send Message
+                    </button>
                 </div>
-            ))}
+            </div>
+
+            {/* Notifications List */}
+            <div className={styles.glassCard} style={{ padding: '1.5rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                    <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600, color: '#1e293b' }}>All Notifications</h3>
+                    {notifications.length > 0 && onClear && (
+                        <button
+                            onClick={onClear}
+                            style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.85rem', padding: '0.4rem 0.8rem', color: '#dc2626', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '6px', cursor: 'pointer', fontWeight: 500 }}
+                        >
+                            <Trash2 size={14} /> Clear All
+                        </button>
+                    )}
+                </div>
+                <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+                    {notifications.length > 0 ? notifications.map(notif => (
+                        <div key={notif.id} style={{ position: 'relative', display: 'flex', gap: '0.75rem', alignItems: 'flex-start', padding: '0.85rem', borderBottom: '1px solid #f1f5f9', background: notif.isRead ? 'transparent' : '#f0f9ff', borderRadius: '6px', marginBottom: '4px' }}>
+                            <div style={{ padding: '0.5rem', background: notif.type === 'WARNING' ? '#fef3c7' : '#e0f2fe', borderRadius: '8px', color: notif.type === 'WARNING' ? '#d97706' : '#0369a1', flexShrink: 0 }}>
+                                {notif.type === 'WARNING' ? <AlertTriangle size={18} /> : <Bell size={18} />}
+                            </div>
+                            <div style={{ flex: 1 }}>
+                                <p style={{ margin: '0 0 0.25rem 0', fontSize: '0.9rem', fontWeight: 500, color: '#1e293b' }}>{notif.message}</p>
+                                <span style={{ fontSize: '0.8rem', color: '#64748b' }}>{new Date(notif.createdAt).toLocaleString()}</span>
+                                {notif.category && <span style={{ marginLeft: '0.5rem', fontSize: '0.75rem', background: '#f1f5f9', padding: '2px 8px', borderRadius: '4px', color: '#475569' }}>{notif.category}</span>}
+                            </div>
+                            {onDelete && (
+                                <button
+                                    onClick={() => onDelete(notif.id)}
+                                    style={{ position: 'absolute', top: '8px', right: '8px', background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '4px' }}
+                                    title="Delete"
+                                >
+                                    <X size={14} />
+                                </button>
+                            )}
+                        </div>
+                    )) : (
+                        <div style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8' }}>
+                            <Bell size={48} style={{ marginBottom: '0.75rem', opacity: 0.5 }} />
+                            <p style={{ margin: 0, fontSize: '0.95rem' }}>No notifications yet</p>
+                        </div>
+                    )}
+                </div>
+            </div>
         </div>
     </div>
 ));
@@ -313,48 +480,6 @@ export const ReportsSection = memo(({ reports = [], onDownload }) => (
                             <td>{r.date}</td>
                             <td>
                                 <button className={styles.actionBtn} onClick={() => onDownload(r)}>Download</button>
-                            </td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
-        </div>
-    </div>
-));
-
-export const GrievancesSection = memo(({ grievances = [], onView }) => (
-    <div className={styles.sectionVisible}>
-        <h2 className={styles.chartTitle} style={{ marginBottom: '1.5rem' }}>Student Grievances</h2>
-        <div className={styles.glassCard}>
-            <table className={styles.table}>
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Student</th>
-                        <th>Issue</th>
-                        <th>Date</th>
-                        <th>Priority</th>
-                        <th>Status</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {grievances.map(g => (
-                        <tr key={g.id}>
-                            <td>{g.id}</td>
-                            <td>{g.student}</td>
-                            <td>{g.issue}</td>
-                            <td>{g.date}</td>
-                            <td>
-                                <span style={{
-                                    padding: '4px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 700,
-                                    background: g.priority === 'High' ? '#fee2e2' : g.priority === 'Medium' ? '#fef3c7' : '#f1f5f9',
-                                    color: g.priority === 'High' ? '#991b1b' : g.priority === 'Medium' ? '#b45309' : '#64748b'
-                                }}>{g.priority}</span>
-                            </td>
-                            <td>{g.status}</td>
-                            <td>
-                                <button className={styles.secondaryBtn} onClick={() => onView(g)}>Details</button>
                             </td>
                         </tr>
                     ))}

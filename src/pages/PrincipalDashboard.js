@@ -17,13 +17,13 @@ import DepartmentSection from '../components/dashboard/principal/DepartmentSecti
 // import FacultySection from '../components/dashboard/principal/FacultySection'; // Replaced by FacultyDirectorySection
 import { DirectorySection } from '../components/dashboard/principal/DirectorySection';
 import {
-    FacultyDirectorySection, TimetablesSection, CircularsSection,
-    ReportsSection, GrievancesSection
+    FacultyDirectorySection, CIEScheduleSection,
+    ReportsSection, NotificationsSection
 } from '../components/dashboard/principal/SectionComponents';
 
 import {
     fetchPrincipalDashboard, fetchAllFaculty, fetchTimetables,
-    fetchCirculars, fetchReports, fetchGrievances
+    fetchNotifications, fetchReports
 } from '../services/api';
 
 const PrincipalDashboard = () => {
@@ -34,9 +34,8 @@ const PrincipalDashboard = () => {
     const [dashboardData, setDashboardData] = useState(null);
     const [facultyList, setFacultyList] = useState([]);
     const [timetables, setTimetables] = useState([]);
-    const [circulars, setCirculars] = useState([]);
+    const [notifications, setNotifications] = useState([]);
     const [reports, setReports] = useState([]);
-    const [grievances, setGrievances] = useState([]);
 
     const [loading, setLoading] = useState(true);
 
@@ -48,6 +47,11 @@ const PrincipalDashboard = () => {
     const [toast, setToast] = useState({ show: false, msg: '', type: 'info' });
     const [activeModal, setActiveModal] = useState(null);
     const [selectedItem, setSelectedItem] = useState(null);
+
+    // Notification Sending State
+    const [msgRecipientType, setMsgRecipientType] = useState('HOD');
+    const [msgTargetDept, setMsgTargetDept] = useState('ALL');
+    const [msgText, setMsgText] = useState('');
 
     // Fetch All Data
     useEffect(() => {
@@ -62,24 +66,21 @@ const PrincipalDashboard = () => {
                     dashData,
                     faculty,
                     times,
-                    circs,
-                    reps,
-                    grievs
+                    notifs,
+                    reps
                 ] = await Promise.all([
                     fetchPrincipalDashboard(token),
                     fetchAllFaculty(token),
                     fetchTimetables(token),
-                    fetchCirculars(token),
-                    fetchReports(token),
-                    fetchGrievances(token)
+                    fetchNotifications(token),
+                    fetchReports(token)
                 ]);
 
                 if (dashData) setDashboardData(dashData);
                 if (faculty) setFacultyList(faculty);
                 if (times) setTimetables(times);
-                if (circs) setCirculars(circs);
+                if (notifs) setNotifications(notifs);
                 if (reps) setReports(reps);
-                if (grievs) setGrievances(grievs);
 
             } catch (error) {
                 console.error("Failed to load dashboard data details:", error);
@@ -113,11 +114,10 @@ const PrincipalDashboard = () => {
         { label: 'Departments', path: '#departments', icon: <Building size={20} />, isActive: activeTab === 'departments', onClick: () => setActiveTab('departments') },
         { label: 'Faculty Directory', path: '#faculty', icon: <Briefcase size={20} />, isActive: activeTab === 'faculty', onClick: () => setActiveTab('faculty') },
         { label: 'Student Search', path: '#directory', icon: <Users size={20} />, isActive: activeTab === 'directory', onClick: () => { setActiveTab('directory'); setSelectedDept(null); } },
-        { label: 'Time Tables', path: '#timetables', icon: <Calendar size={20} />, isActive: activeTab === 'timetables', onClick: () => setActiveTab('timetables') },
+        { label: 'CIE Schedule', path: '#timetables', icon: <Calendar size={20} />, isActive: activeTab === 'timetables', onClick: () => setActiveTab('timetables') },
         { label: 'CIE Compliance', path: '#compliance', icon: <ShieldCheck size={20} />, isActive: activeTab === 'compliance', onClick: () => setActiveTab('compliance') },
         { label: 'Reports & Analytics', path: '#reports', icon: <FileText size={20} />, isActive: activeTab === 'reports', onClick: () => setActiveTab('reports') },
-        { label: 'Circulars', path: '#circulars', icon: <Bell size={20} />, isActive: activeTab === 'circulars', onClick: () => setActiveTab('circulars') },
-        { label: 'Grievances', path: '#grievances', icon: <AlertTriangle size={20} />, isActive: activeTab === 'grievances', onClick: () => setActiveTab('grievances') }
+        { label: 'Notifications', path: '#notifications', icon: <Bell size={20} />, isActive: activeTab === 'notifications', onClick: () => setActiveTab('notifications') }
     ];
 
     /* Chart Configs and Helper Logic */
@@ -153,12 +153,66 @@ const PrincipalDashboard = () => {
         setDeptStudents([]);
     }, []);
 
-    const handleAddFaculty = useCallback(() => setActiveModal('faculty'), []);
+    const handleRemoveFaculty = useCallback(() => setActiveModal('removeFaculty'), []);
 
     // const handleViewGrievance = useCallback((g) => {
     //     setSelectedItem(g);
     //     setActiveModal('grievance');
     // }, []);
+
+    // --- Notification Handlers ---
+    const API_BASE_URL = 'http://127.0.0.1:8084/api';
+
+    const handleSendNotification = useCallback(async () => {
+        if (!msgText.trim()) return;
+        try {
+            const res = await fetch(`${API_BASE_URL}/notifications/broadcast`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    senderId: user?.username || 'principal',
+                    message: msgText,
+                    targetRole: msgRecipientType,
+                    department: msgTargetDept
+                })
+            });
+            const data = await res.json();
+            showToast(data.message || 'Message sent!', 'success');
+            setMsgText('');
+        } catch (err) {
+            console.error('Send notification error:', err);
+            showToast('Failed to send notification', 'error');
+        }
+    }, [msgText, msgRecipientType, msgTargetDept, user, showToast]);
+
+    const handleClearNotifications = useCallback(async () => {
+        try {
+            const token = user?.token;
+            await fetch(`${API_BASE_URL}/notifications/clear`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            setNotifications([]);
+            showToast('Notifications cleared', 'info');
+        } catch (err) {
+            console.error('Clear notifications error:', err);
+            showToast('Failed to clear notifications', 'error');
+        }
+    }, [user, showToast]);
+
+    const handleDeleteNotification = useCallback(async (id) => {
+        try {
+            const token = user?.token;
+            await fetch(`${API_BASE_URL}/notifications/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            setNotifications(prev => prev.filter(n => n.id !== id));
+        } catch (err) {
+            console.error('Delete notification error:', err);
+            showToast('Failed to delete notification', 'error');
+        }
+    }, [user, showToast]);
 
     const handleLogout = () => {
         logout();
@@ -214,27 +268,34 @@ const PrincipalDashboard = () => {
                     setSelectedDept={setSelectedDept}
                 />}
 
-                {activeTab === 'faculty' && <FacultyDirectorySection facultyMembers={facultyList} onAdd={handleAddFaculty} />}
+                {activeTab === 'faculty' && <FacultyDirectorySection facultyMembers={facultyList} onRemove={handleRemoveFaculty} />}
 
-                {activeTab === 'timetables' && <TimetablesSection timetables={timetables} onDownload={handleDownload} />}
-                {activeTab === 'circulars' && <CircularsSection circulars={circulars} onNewBroadcast={handleNewBroadcast} />}
+                {activeTab === 'timetables' && <CIEScheduleSection schedules={timetables} onDownload={handleDownload} />}
+                {activeTab === 'notifications' && <NotificationsSection
+                    notifications={notifications}
+                    recipientType={msgRecipientType}
+                    setRecipientType={setMsgRecipientType}
+                    targetDept={msgTargetDept}
+                    setTargetDept={setMsgTargetDept}
+                    messageText={msgText}
+                    setMessageText={setMsgText}
+                    onSend={handleSendNotification}
+                    onClear={handleClearNotifications}
+                    onDelete={handleDeleteNotification}
+                />}
                 {activeTab === 'reports' && <ReportsSection reports={reports} onDownload={handleDownload} />}
-                {activeTab === 'grievances' && <GrievancesSection grievances={grievances} onView={() => { }} />}
             </div>
 
             {/* Interaction Modals */}
             <ToastNotification show={toast.show} msg={toast.msg} type={toast.type} />
 
-            <SimpleModal isOpen={activeModal === 'faculty'} onClose={() => setActiveModal(null)} title="Add New Faculty">
-                <form onSubmit={handleSaveFaculty} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                    <input className={styles.searchBarInput} placeholder="Full Name" required style={{ border: '1px solid #e2e8f0' }} />
-                    <select className={styles.searchBarInput} style={{ border: '1px solid #e2e8f0' }}>
-                        <option>Computer Science</option>
-                        <option>Mechanical</option>
-                        <option>Civil</option>
-                        <option>Electronics</option>
-                    </select>
-                    <button type="submit" className={styles.primaryBtn} style={{ marginTop: '0.5rem', justifyContent: 'center' }}>Save Faculty</button>
+            <SimpleModal isOpen={activeModal === 'removeFaculty'} onClose={() => setActiveModal(null)} title="Remove Faculty">
+                <form onSubmit={(e) => { e.preventDefault(); setActiveModal(null); showToast('Faculty Removed', 'success'); }} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    <p style={{ margin: 0, color: '#64748b', fontSize: '0.9rem' }}>
+                        Are you sure you want to remove a faculty member? This action cannot be undone.
+                    </p>
+                    <input className={styles.searchBarInput} placeholder="Enter Faculty ID to Remove" required style={{ border: '1px solid #e2e8f0' }} />
+                    <button type="submit" className={styles.primaryBtn} style={{ marginTop: '0.5rem', justifyContent: 'center', background: '#ef4444' }}>Confirm Removal</button>
                 </form>
             </SimpleModal>
         </DashboardLayout>

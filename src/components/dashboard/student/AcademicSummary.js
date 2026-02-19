@@ -1,8 +1,8 @@
 import React from 'react';
-import { TrendingUp, BookOpen, AlertCircle, Award } from 'lucide-react';
+import { TrendingUp, BookOpen, AlertCircle, Award, CheckCircle } from 'lucide-react';
 import styles from '../../../pages/StudentDashboard.module.css';
 
-const AcademicSummary = ({ studentInfo, riskLevel }) => {
+const AcademicSummary = ({ studentInfo, riskLevel, cieStatus = '0/5' }) => {
     // Determine risk color and label
     const riskColor = riskLevel === 'High' ? 'var(--danger)' : riskLevel === 'Moderate' ? 'var(--warning)' : 'var(--success)';
     const riskLabel = riskLevel || 'Low';
@@ -30,6 +30,18 @@ const AcademicSummary = ({ studentInfo, riskLevel }) => {
                     <span className={styles.summaryLabel}>Avg CIE Score</span>
                     <h3 className={styles.summaryValue}>{studentInfo.avgCieScore || '0/25'}</h3>
                     <span className={styles.summarySubtext}>Current Sem</span>
+                </div>
+            </div>
+
+            {/* CIE Progress */}
+            <div className={styles.summaryCard}>
+                <div className={styles.summaryIcon} style={{ background: 'rgba(16, 185, 129, 0.1)', color: 'var(--success)' }}>
+                    <CheckCircle size={24} />
+                </div>
+                <div className={styles.summaryInfo}>
+                    <span className={styles.summaryLabel}>CIE Progress</span>
+                    <h3 className={styles.summaryValue}>{cieStatus}</h3>
+                    <span className={styles.summarySubtext}>CIEs Completed</span>
                 </div>
             </div>
 

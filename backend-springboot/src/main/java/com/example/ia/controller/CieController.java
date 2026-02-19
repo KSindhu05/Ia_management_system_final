@@ -93,6 +93,70 @@ public class CieController {
         return ResponseEntity.ok(ann);
     }
 
+    @PutMapping("/faculty/announcements/syllabus")
+    @PreAuthorize("hasRole('FACULTY')")
+    public ResponseEntity<?> updateSyllabus(@RequestBody Map<String, Object> data) {
+        Long subjectId = Long.valueOf(data.get("subjectId").toString());
+        String cieNumber = data.get("cieNumber").toString();
+        String syllabus = data.getOrDefault("syllabusCoverage", "").toString();
+
+        // Find the existing announcement for this subject+CIE
+        List<Announcement> matches = announcementRepository.findBySubjectIdIn(List.of(subjectId));
+        Announcement existing = matches.stream()
+                .filter(a -> cieNumber.equals(a.getCieNumber()))
+                .findFirst()
+                .orElse(null);
+
+        if (existing == null) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("message",
+                            "No CIE schedule found for this subject and CIE number. HOD must schedule it first."));
+        }
+
+        existing.setSyllabusCoverage(syllabus);
+        announcementRepository.save(existing);
+        return ResponseEntity.ok(existing);
+    }
+
+    @PutMapping("/hod/announcements/syllabus")
+    @PreAuthorize("hasRole('HOD')")
+    public ResponseEntity<?> updateSyllabusHod(@RequestBody Map<String, Object> data) {
+        Long subjectId = Long.valueOf(data.get("subjectId").toString());
+        String cieNumber = data.get("cieNumber").toString();
+        String syllabus = data.getOrDefault("syllabusCoverage", "").toString();
+
+        Subject subject = subjectRepository.findById(subjectId).orElse(null);
+        if (subject == null) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("message", "Subject not found."));
+        }
+
+        List<Announcement> matches = announcementRepository.findBySubjectIdIn(List.of(subjectId));
+        Announcement existing = matches.stream()
+                .filter(a -> cieNumber.equals(a.getCieNumber()))
+                .findFirst()
+                .orElse(null);
+
+        if (existing == null) {
+            // Create a new announcement with syllabus
+            Announcement ann = new Announcement();
+            ann.setSubject(subject);
+            ann.setCieNumber(cieNumber);
+            ann.setSyllabusCoverage(syllabus);
+            ann.setScheduledDate(java.time.LocalDate.now());
+            ann.setStartTime("TBD");
+            ann.setDurationMinutes(60);
+            ann.setExamRoom("TBD");
+            ann.setStatus("SYLLABUS_ONLY");
+            announcementRepository.save(ann);
+            return ResponseEntity.ok(ann);
+        }
+
+        existing.setSyllabusCoverage(syllabus);
+        announcementRepository.save(existing);
+        return ResponseEntity.ok(existing);
+    }
+
     @GetMapping("/faculty/announcements/details")
     @PreAuthorize("hasRole('FACULTY')")
     public ResponseEntity<?> getFacultyAnnouncementDetails(

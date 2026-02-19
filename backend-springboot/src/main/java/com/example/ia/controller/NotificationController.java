@@ -38,9 +38,7 @@ public class NotificationController {
     @PostMapping("/broadcast")
     // @PreAuthorize("hasRole('HOD') or hasRole('PRINCIPAL')") // Bypass for now
     public ResponseEntity<?> broadcastNotification(@RequestBody Map<String, String> data) {
-        // String username =
-        // SecurityContextHolder.getContext().getAuthentication().getName();
-        String username = data.get("senderId"); // Get from body because Auth might be bypassed
+        String username = data.get("senderId");
 
         System.out.println("DEBUG: Broadcast request from user (via body): " + username);
 
@@ -55,24 +53,40 @@ public class NotificationController {
         }
 
         String message = data.getOrDefault("message", "");
-        String targetRole = data.getOrDefault("targetRole", "FACULTY"); // Default to FACULTY if not provided
-        String department = sender.getDepartment();
+        String targetRole = data.getOrDefault("targetRole", "FACULTY");
+        String targetDepartment = data.getOrDefault("department", null);
+        boolean isPrincipal = "PRINCIPAL".equalsIgnoreCase(sender.getRole());
 
-        System.out.println("DEBUG: Broadcasting message to role: " + targetRole + " in department: " + department);
+        List<User> targets;
 
-        // Find all users of targetRole in the same department
-        List<User> targets = userRepository.findByRoleAndDepartment(targetRole, department);
-        System.out.println("DEBUG: Found " + targets.size() + " targets for broadcast.");
+        if (isPrincipal) {
+            // Principal can target a specific department or ALL departments
+            if (targetDepartment != null && !targetDepartment.isEmpty() && !"ALL".equalsIgnoreCase(targetDepartment)) {
+                targets = userRepository.findByRoleAndDepartment(targetRole, targetDepartment);
+                System.out.println("DEBUG: Principal broadcasting to " + targetRole + " in dept: " + targetDepartment);
+            } else {
+                targets = userRepository.findByRole(targetRole);
+                System.out.println("DEBUG: Principal broadcasting to ALL " + targetRole + "s");
+            }
+        } else {
+            // HOD broadcasts within their own department
+            String department = sender.getDepartment();
+            targets = userRepository.findByRoleAndDepartment(targetRole, department);
+            System.out.println("DEBUG: HOD broadcasting to " + targetRole + " in dept: " + department);
+        }
+
+        String senderLabel = isPrincipal ? "Principal" : ("HOD - " + sender.getDepartment());
 
         for (User target : targets) {
             Notification notif = new Notification();
             notif.setUser(target);
             notif.setMessage(message);
             notif.setType("INFO");
-            notif.setCategory("broadcast");
+            notif.setCategory(senderLabel);
             notificationRepository.save(notif);
         }
 
+        System.out.println("DEBUG: Broadcast sent to " + targets.size() + " recipients.");
         return ResponseEntity.ok(Map.of("message", "Notification broadcast to " + targets.size() + " recipients"));
     }
 

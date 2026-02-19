@@ -1,14 +1,18 @@
 package com.example.ia.controller;
 
+import com.example.ia.entity.Announcement;
 import com.example.ia.entity.CieMark;
 import com.example.ia.entity.Student;
 
 import com.example.ia.entity.Subject;
 import com.example.ia.entity.User;
+import com.example.ia.repository.AnnouncementRepository;
 import com.example.ia.repository.CieMarkRepository;
 import com.example.ia.repository.StudentRepository;
 import com.example.ia.repository.SubjectRepository;
 import com.example.ia.repository.UserRepository;
+import com.example.ia.entity.Notification;
+import com.example.ia.repository.NotificationRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -26,6 +30,9 @@ public class PrincipalController {
     UserRepository userRepository;
 
     @Autowired
+    AnnouncementRepository announcementRepository;
+
+    @Autowired
     StudentRepository studentRepository;
 
     @Autowired
@@ -33,6 +40,9 @@ public class PrincipalController {
 
     @Autowired
     CieMarkRepository cieMarkRepository;
+
+    @Autowired
+    NotificationRepository notificationRepository;
 
     @GetMapping("/dashboard")
     @PreAuthorize("hasRole('PRINCIPAL')")
@@ -188,14 +198,52 @@ public class PrincipalController {
     }
 
     @GetMapping("/timetables")
-    public List<Object> getTimetables() {
-        return new ArrayList<>();
+    public List<Announcement> getTimetables() {
+        return announcementRepository.findAll();
     }
 
-    @GetMapping("/circulars")
-    public List<Object> getCirculars() {
-        return new ArrayList<>();
+    @GetMapping("/debug/seed-cie")
+    public String seedCie() {
+        try {
+            Subject s = subjectRepository.findAll().stream()
+                    .filter(sub -> "CSE".equals(sub.getDepartment()))
+                    .findFirst()
+                    .orElse(null);
+
+            if (s == null)
+                return "Error: No CSE subjects found to attach CIE to.";
+
+            Announcement a = new Announcement();
+            a.setSubject(s);
+            a.setCieNumber("TEST-" + System.currentTimeMillis() % 1000);
+            a.setScheduledDate(java.time.LocalDate.now().plusDays(2));
+            a.setStartTime("02:00 PM");
+            a.setDurationMinutes(90);
+            a.setStatus("SCHEDULED");
+            a.setExamRoom("Room 101");
+
+            User u = userRepository.findByRole("FACULTY").stream().findFirst().orElse(null);
+            if (u == null)
+                u = userRepository.findByUsernameIgnoreCase("PRINCIPAL").orElse(null);
+            a.setFaculty(u);
+
+            announcementRepository.save(a);
+            return "Seeded CIE: " + a.getCieNumber();
+        } catch (Exception e) {
+            return "Error seeding: " + e.getMessage();
+        }
     }
+
+    @GetMapping("/notifications")
+    public List<Notification> getNotifications() {
+        return notificationRepository.findAll(); // Or filter by target role
+    }
+    /*
+     * @GetMapping("/circulars")
+     * public List<Object> getCirculars() {
+     * return new ArrayList<>();
+     * }
+     */
 
     @GetMapping("/reports")
     public List<Object> getReports() {

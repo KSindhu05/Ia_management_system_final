@@ -74,15 +74,15 @@ export const fetchTimetables = async (token) => {
     }
 };
 
-export const fetchCirculars = async (token) => {
+export const fetchNotifications = async (token) => {
     try {
         const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-        const response = await fetch(`${API_BASE_URL}/principal/circulars`, { headers });
-        if (!response.ok) throw new Error('Failed to fetch circulars');
+        const response = await fetch(`${API_BASE_URL}/principal/notifications`, { headers });
+        if (!response.ok) throw new Error('Failed to fetch notifications');
         return await response.json();
     } catch (error) {
-        console.error('Fetch circulars error:', error);
-        return null;
+        console.error('Fetch notifications error:', error);
+        return [];
     }
 };
 
@@ -94,18 +94,6 @@ export const fetchReports = async (token) => {
         return await response.json();
     } catch (error) {
         console.error('Fetch reports error:', error);
-        return [];
-    }
-};
-
-export const fetchGrievances = async (token) => {
-    try {
-        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-        const response = await fetch(`${API_BASE_URL}/principal/grievances`, { headers });
-        if (!response.ok) throw new Error('Failed to fetch grievances');
-        return await response.json();
-    } catch (error) {
-        console.error('Fetch grievances error:', error);
         return [];
     }
 };

@@ -6,7 +6,6 @@ import { LayoutDashboard, FileText, Calendar, Book, User, Download, Bell, Trendi
 import { useAuth } from '../context/AuthContext';
 import styles from './StudentDashboard.module.css';
 import AcademicSummary from '../components/dashboard/student/AcademicSummary';
-import AcademicAnalytics from '../components/dashboard/student/AcademicAnalytics';
 import AcademicInsights from '../components/dashboard/student/AcademicInsights';
 
 const StudentDashboard = () => {
@@ -230,58 +229,82 @@ const StudentDashboard = () => {
 
     const renderOverview = () => (
         <div className={styles.detailsContainer}>
-            {/* New Academic Analytics Section */}
             <div className={styles.contentGrid}>
-                <AcademicAnalytics realMarks={realMarks} />
+                {/* Current Semester Performance Table (replaces Performance Trend graph) */}
+                <div className={styles.card} style={{ animationDelay: '0.2s' }}>
+                    <div className={styles.cardHeader} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <h2 className={styles.cardTitle} style={{ margin: 0 }}>📑 Current Semester CIE Performance</h2>
+                    </div>
+                    <div className={styles.tableContainer}>
+                        <table className={styles.table}>
+                            <thead><tr><th>Subject</th><th>CIE-1</th><th>Total Progress</th><th>Grade</th></tr></thead>
+                            <tbody>
+                                {realSubjects.length > 0 ? realSubjects.map((sub, idx) => {
+                                    const mark = realMarks.find(m => m.subject.id === sub.id) || {};
+                                    const total = mark.cie1Score || 0;
+                                    const maxMarks = 50;
+                                    const status = getStatus(total, maxMarks);
+                                    const progressWidth = Math.min((total / maxMarks) * 100, 100);
+
+                                    return (
+                                        <tr key={sub.id} style={{ animation: `fadeIn 0.4s ease-out ${idx * 0.1}s backwards` }}>
+                                            <td><div className={styles.subjectCell}><span style={{ fontWeight: 600 }}>{sub.name}</span><br /><span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{sub.code}</span></div></td>
+                                            <td>{mark.cie1Score != null ? mark.cie1Score : '-'}</td>
+                                            <td style={{ minWidth: '150px' }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '4px' }}>
+                                                    <span>{total} / {maxMarks}</span>
+                                                    <span style={{ fontWeight: 600 }}>{Math.round(progressWidth)}%</span>
+                                                </div>
+                                                <div className={styles.progressContainer}>
+                                                    <div className={styles.progressBar} style={{ width: `${progressWidth}%`, background: status.color }}></div>
+                                                </div>
+                                            </td>
+                                            <td><span className={styles.badge} style={{ color: status.color, background: status.bg }}>{status.label}</span></td>
+                                        </tr>
+                                    );
+                                }) : <tr><td colSpan="4" style={{ textAlign: 'center', padding: '1rem' }}>Loading real-time data...</td></tr>}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
                 <AcademicInsights realMarks={realMarks} />
-            </div>
-
-            <div className={styles.card} style={{ animationDelay: '0.4s' }}>
-                <div className={styles.cardHeader} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <h2 className={styles.cardTitle} style={{ margin: 0 }}>📑 Current Semester Performance</h2>
-                    <button className={styles.actionBtn} onClick={handleDownload}>
-                        <Download size={18} />
-                        Download Report
-                    </button>
-                </div>
-                <div className={styles.tableContainer}>
-                    <table className={styles.table}>
-                        <thead><tr><th>Subject</th><th>CIE-1</th><th>Total Progress</th><th>Grade</th></tr></thead>
-                        <tbody>
-                            {realSubjects.length > 0 ? realSubjects.map((sub, idx) => {
-                                const mark = realMarks.find(m => m.subject.id === sub.id) || {};
-                                const total = mark.cie1Score || 0;
-                                const maxMarks = 50; // Since only showing CIE-1
-                                const status = getStatus(total, maxMarks);
-
-
-                                const progressWidth = Math.min((total / maxMarks) * 100, 100);
-
-                                return (
-                                    <tr key={sub.id} style={{ animation: `fadeIn 0.4s ease-out ${idx * 0.1}s backwards` }}>
-                                        <td><div className={styles.subjectCell}><span style={{ fontWeight: 600 }}>{sub.name}</span><br /><span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{sub.code}</span></div></td>
-                                        <td>{mark.cie1Score != null ? mark.cie1Score : '-'}</td>
-                                        <td style={{ minWidth: '150px' }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '4px' }}>
-                                                <span>{total} / {maxMarks}</span>
-                                                <span style={{ fontWeight: 600 }}>{Math.round(progressWidth)}%</span>
-                                            </div>
-                                            <div className={styles.progressContainer}>
-                                                <div className={styles.progressBar} style={{ width: `${progressWidth}%`, background: status.color }}></div>
-                                            </div>
-                                        </td>
-                                        <td><span className={styles.badge} style={{ color: status.color, background: status.bg }}>{status.label}</span></td>
-                                    </tr>
-                                );
-                            }) : <tr><td colSpan="9" style={{ textAlign: 'center', padding: '1rem' }}>Loading real-time data...</td></tr>}
-                        </tbody>
-                    </table>
-                </div>
             </div>
         </div>
     );
 
     // ... (rest of render functions remain mostly same but can benefit from global CSS updates)
+
+    const downloadCIEMarks = (subjects, filter) => {
+        let headers = ['Code', 'Subject'];
+        if (filter === 'All') {
+            headers.push('CIE-1', 'CIE-2', 'Skill Test 1', 'Skill Test 2', 'Activities');
+        } else {
+            headers.push(filter);
+        }
+        headers.push('Total', 'Max Marks');
+
+        const rows = subjects.map(item => {
+            const row = [item.code, `"${item.subject}"`];
+            if (filter === 'All') {
+                row.push(item.cie1, item.cie2, item.cie3, item.cie4, item.cie5);
+            } else if (filter === 'CIE-1') row.push(item.cie1);
+            else if (filter === 'CIE-2') row.push(item.cie2);
+            else if (filter === 'CIE-3') row.push(item.cie3);
+            else if (filter === 'CIE-4') row.push(item.cie4);
+            else if (filter === 'CIE-5') row.push(item.cie5);
+            row.push(item.total, filter === 'All' ? 250 : 50);
+            return row.join(',');
+        });
+
+        const csv = [headers.join(','), ...rows].join('\n');
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `CIE_Marks_${studentInfo.rollNo}_${filter === 'All' ? 'All_CIEs' : filter}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+    };
 
     const renderCIEMarks = () => {
         const theorySubjects = [];
@@ -325,18 +348,33 @@ const StudentDashboard = () => {
         return (
             <div className={styles.detailsContainer}>
                 <div className={styles.card} style={{ marginBottom: '1.5rem', animationDelay: '0.1s' }}>
-                    <div className={styles.selectionRow}>
-                        <div className={styles.selectionGroup}><label className={styles.selectionLabel}>Select Semester:</label><select value={selectedSemester} onChange={(e) => setSelectedSemester(e.target.value)} className={styles.selectInput}>{[1, 2, 3, 4, 5, 6].map(sem => <option key={sem} value={sem}>Semester {sem}</option>)}</select></div>
-                        <div className={styles.selectionGroup}><label className={styles.selectionLabel}>Select Internals:</label>
-                            <select value={selectedCIE} onChange={(e) => setSelectedCIE(e.target.value)} className={styles.selectInput}>
-                                <option value="All">All Internals</option>
-                                <option value="CIE-1">CIE-1</option>
-                                <option value="CIE-2">CIE-2</option>
-                                <option value="CIE-3">CIE-3 Skill Test 1</option>
-                                <option value="CIE-4">CIE-4 Skill Test 2</option>
-                                <option value="CIE-5">CIE-5 Activities</option>
-                            </select>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+                        <div className={styles.selectionRow} style={{ flex: 1 }}>
+                            <div className={styles.selectionGroup}><label className={styles.selectionLabel}>Select Semester:</label><select value={selectedSemester} onChange={(e) => setSelectedSemester(e.target.value)} className={styles.selectInput}>{[1, 2, 3, 4, 5, 6].map(sem => <option key={sem} value={sem}>Semester {sem}</option>)}</select></div>
+                            <div className={styles.selectionGroup}><label className={styles.selectionLabel}>Select Internals:</label>
+                                <select value={selectedCIE} onChange={(e) => setSelectedCIE(e.target.value)} className={styles.selectInput}>
+                                    <option value="All">All Internals</option>
+                                    <option value="CIE-1">CIE-1</option>
+                                    <option value="CIE-2">CIE-2</option>
+                                    <option value="CIE-3">CIE-3 Skill Test 1</option>
+                                    <option value="CIE-4">CIE-4 Skill Test 2</option>
+                                    <option value="CIE-5">CIE-5 Activities</option>
+                                </select>
+                            </div>
                         </div>
+                        <button
+                            onClick={() => downloadCIEMarks(theorySubjects, selectedCIE)}
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: '6px',
+                                padding: '0.5rem 1rem', borderRadius: '8px',
+                                background: '#3b82f6', color: 'white', border: 'none',
+                                cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem',
+                                whiteSpace: 'nowrap'
+                            }}
+                        >
+                            <Download size={16} />
+                            Download {selectedCIE === 'All' ? 'All Marks' : selectedCIE + ' Marks'}
+                        </button>
                     </div>
                 </div>
 
@@ -567,6 +605,7 @@ const StudentDashboard = () => {
                 {activeSection === 'Overview' && (
                     <AcademicSummary
                         studentInfo={studentInfo}
+                        cieStatus={cieStatus}
                         // Risk Logic: High if Aggregate < 40 OR Attendance < 75. Moderate if Aggregate < 60. Else Low.
                         riskLevel={
                             (parseFloat(studentInfo.cgpa) < 40) ? 'High' :

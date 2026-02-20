@@ -285,6 +285,17 @@ public class HodController {
     @PreAuthorize("hasRole('HOD')")
     public ResponseEntity<?> updateFaculty(@PathVariable Long id, @RequestBody User facultyData) {
         return userRepository.findById(id).map(faculty -> {
+            // Username change — only if provided and not taken by someone else
+            if (facultyData.getUsername() != null && !facultyData.getUsername().isBlank()) {
+                String newUsername = facultyData.getUsername().trim();
+                if (!newUsername.equals(faculty.getUsername())) {
+                    if (userRepository.existsByUsername(newUsername)) {
+                        return ResponseEntity.badRequest()
+                                .<Object>body(Map.of("message", "Username '" + newUsername + "' is already taken."));
+                    }
+                    faculty.setUsername(newUsername);
+                }
+            }
             if (facultyData.getFullName() != null)
                 faculty.setFullName(facultyData.getFullName());
             if (facultyData.getEmail() != null)

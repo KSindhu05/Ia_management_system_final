@@ -12,6 +12,7 @@ public class StudentResponse {
     private String section;
     private String email;
     private String phone;
+    private String parentPhone;
     private Map<String, Double> marks;
 
     // Mocked fields for UI
@@ -27,6 +28,7 @@ public class StudentResponse {
         this.section = student.getSection();
         this.email = student.getEmail();
         this.phone = student.getPhone();
+        this.parentPhone = student.getParentPhone();
         this.marks = marks;
     }
 
@@ -45,6 +47,14 @@ public class StudentResponse {
 
     public String getDepartment() {
         return department;
+    }
+
+    public String getParentPhone() {
+        return parentPhone;
+    }
+
+    public void setParentPhone(String parentPhone) {
+        this.parentPhone = parentPhone;
     }
 
     public Integer getSemester() {

@@ -1,11 +1,13 @@
 package com.example.ia.service;
 
 import com.example.ia.entity.CieMark;
+import com.example.ia.entity.FacultyAssignmentRequest;
 import com.example.ia.entity.Student;
 import com.example.ia.entity.Subject;
 import com.example.ia.entity.User;
 import com.example.ia.payload.response.FacultyClassAnalytics;
 import com.example.ia.repository.CieMarkRepository;
+import com.example.ia.repository.FacultyAssignmentRequestRepository;
 import com.example.ia.repository.StudentRepository;
 import com.example.ia.repository.SubjectRepository;
 import com.example.ia.repository.UserRepository;
@@ -34,6 +36,9 @@ public class FacultyService {
     @Autowired
     private StudentRepository studentRepository;
 
+    @Autowired
+    private FacultyAssignmentRequestRepository assignmentRequestRepository;
+
     // ---------------------------------------------------------------
     // Parse the comma-separated section field into a list of sections.
     // e.g. "A,B" → ["A", "B"]
@@ -59,24 +64,89 @@ public class FacultyService {
             return List.of();
 
         List<String> sections = parseSections(user);
-        if (sections.isEmpty()) {
-            // No section restriction set — return all students
+
+        // Also gather sections from approved cross-department assignments
+        List<FacultyAssignmentRequest> approvedRequests = assignmentRequestRepository
+                .findByFacultyId(user.getId());
+        Set<String> allSections = new HashSet<>(sections);
+        Set<String> crossDeptDepartments = new HashSet<>();
+
+        for (FacultyAssignmentRequest req : approvedRequests) {
+            if ("APPROVED".equals(req.getStatus())) {
+                crossDeptDepartments.add(req.getTargetDepartment());
+                if (req.getSections() != null && !req.getSections().isBlank()) {
+                    Arrays.stream(req.getSections().split(","))
+                            .map(String::trim)
+                            .filter(s -> !s.isEmpty())
+                            .forEach(allSections::add);
+                }
+            }
+        }
+
+        if (allSections.isEmpty() && crossDeptDepartments.isEmpty()) {
+            // No section restriction, no cross-dept — return all students
             return studentRepository.findAll();
         }
-        return studentRepository.findBySectionIn(sections);
+
+        // Get students from home department sections
+        List<Student> result = new ArrayList<>();
+        Set<Long> addedIds = new HashSet<>();
+
+        if (!sections.isEmpty()) {
+            List<Student> homeSectionStudents = studentRepository.findBySectionIn(sections);
+            for (Student s : homeSectionStudents) {
+                if (addedIds.add(s.getId()))
+                    result.add(s);
+            }
+        } else if (crossDeptDepartments.isEmpty()) {
+            // Only home dept, no sections set — all students
+            return studentRepository.findAll();
+        }
+
+        // Get students from cross-dept departments
+        for (String dept : crossDeptDepartments) {
+            List<Student> deptStudents = studentRepository.findByDepartment(dept);
+            for (Student s : deptStudents) {
+                // Filter by approved sections for this dept if specified
+                if (addedIds.add(s.getId()))
+                    result.add(s);
+            }
+        }
+
+        return result;
     }
 
     public List<Subject> getSubjectsForFaculty(String username) {
         User user = userRepository.findByUsername(username).orElse(null);
-        if (user == null || user.getSubjects() == null || user.getSubjects().isBlank())
+        if (user == null)
             return List.of();
 
-        List<String> subjectNames = Arrays.stream(user.getSubjects().split(","))
-                .map(String::trim)
-                .filter(s -> !s.isEmpty())
-                .collect(Collectors.toList());
+        Set<String> subjectNames = new HashSet<>();
 
-        return subjectRepository.findByNameIn(subjectNames);
+        // 1. From user's own subjects field (home department)
+        if (user.getSubjects() != null && !user.getSubjects().isBlank()) {
+            Arrays.stream(user.getSubjects().split(","))
+                    .map(String::trim)
+                    .filter(s -> !s.isEmpty())
+                    .forEach(subjectNames::add);
+        }
+
+        // 2. From approved cross-department assignments
+        List<FacultyAssignmentRequest> approvedRequests = assignmentRequestRepository
+                .findByFacultyId(user.getId());
+        for (FacultyAssignmentRequest req : approvedRequests) {
+            if ("APPROVED".equals(req.getStatus()) && req.getSubjects() != null) {
+                Arrays.stream(req.getSubjects().split(","))
+                        .map(String::trim)
+                        .filter(s -> !s.isEmpty())
+                        .forEach(subjectNames::add);
+            }
+        }
+
+        if (subjectNames.isEmpty())
+            return List.of();
+
+        return subjectRepository.findByNameIn(new ArrayList<>(subjectNames));
     }
 
     public FacultyClassAnalytics getAnalytics(String username) {

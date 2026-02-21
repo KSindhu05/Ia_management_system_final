@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import DashboardLayout from '../components/DashboardLayout';
 import API_BASE_URL from '../config/api';
 import { useAuth } from '../context/AuthContext';
-import { LayoutDashboard, Users, FilePlus, Save, AlertCircle, Phone, FileText, CheckCircle, Search, Filter, Mail, X, Download, Clock, BarChart2, TrendingDown, Award, ClipboardList, AlertTriangle, Edit3, Edit, Calendar, UserCheck, BookOpen, Upload, Megaphone, Lock, Bell, MapPin, Trash2 } from 'lucide-react';
+import { LayoutDashboard, Users, FilePlus, Save, AlertCircle, Phone, FileText, CheckCircle, Search, Filter, Mail, X, Download, Clock, BarChart2, TrendingDown, Award, ClipboardList, AlertTriangle, Edit3, Edit, Calendar, UserCheck, BookOpen, Upload, Megaphone, Lock, Bell, MapPin, Trash2, Building2, Send, RefreshCw } from 'lucide-react';
 import { facultyData, facultyProfiles, facultySubjects, studentsList, labSchedule, getMenteesForFaculty } from '../utils/mockData';
 import styles from './FacultyDashboard.module.css';
 
@@ -35,6 +35,16 @@ const FacultyDashboard = () => {
     const [notifications, setNotifications] = useState([]);
     const [unreadCount, setUnreadCount] = useState(0);
     const [publishedSchedules, setPublishedSchedules] = useState([]); // CIE schedules published by HOD
+
+    // Cross-Department Assignment State
+    const [allDepartments, setAllDepartments] = useState([]);
+    const [selectedTargetDept, setSelectedTargetDept] = useState('');
+    const [deptSubjects, setDeptSubjects] = useState([]);
+    const [selectedAssignSubjects, setSelectedAssignSubjects] = useState([]);
+    const [assignSections, setAssignSections] = useState('');
+    const [assignSemester, setAssignSemester] = useState('');
+    const [myAssignmentRequests, setMyAssignmentRequests] = useState([]);
+    const [assignLoading, setAssignLoading] = useState(false);
 
     // API State
     const [subjects, setSubjects] = useState([]);
@@ -625,6 +635,13 @@ const FacultyDashboard = () => {
             icon: <AlertTriangle size={20} />,
             isActive: activeSection === 'Low Performers',
             onClick: () => { setActiveSection('Low Performers'); setSelectedSubject(null); }
+        },
+        {
+            label: 'Dept Assignment',
+            path: '/dashboard/faculty',
+            icon: <Building2 size={20} />,
+            isActive: activeSection === 'Dept Assignment',
+            onClick: () => { setActiveSection('Dept Assignment'); setSelectedSubject(null); }
         },
         {
             label: 'Notifications',
@@ -2614,6 +2631,257 @@ const FacultyDashboard = () => {
     };
 
 
+    // === DEPARTMENT ASSIGNMENT HELPERS ===
+    const fetchAllDepartments = async () => {
+        try {
+            const headers = { 'Authorization': `Bearer ${user.token}` };
+            const res = await fetch(`${API_BASE_URL}/faculty/all-departments`, { headers });
+            if (res.ok) {
+                const data = await res.json();
+                setAllDepartments(data);
+            }
+        } catch (e) { console.error("Failed to fetch departments", e); }
+    };
+
+    const fetchDeptSubjects = async (dept) => {
+        try {
+            const headers = { 'Authorization': `Bearer ${user.token}` };
+            const res = await fetch(`${API_BASE_URL}/faculty/department-subjects?department=${encodeURIComponent(dept)}`, { headers });
+            if (res.ok) {
+                const data = await res.json();
+                setDeptSubjects(data);
+            }
+        } catch (e) { console.error("Failed to fetch dept subjects", e); }
+    };
+
+    const fetchMyAssignmentRequests = async () => {
+        try {
+            const headers = { 'Authorization': `Bearer ${user.token}` };
+            const res = await fetch(`${API_BASE_URL}/faculty/my-assignment-requests`, { headers });
+            if (res.ok) {
+                const data = await res.json();
+                setMyAssignmentRequests(data);
+            }
+        } catch (e) { console.error("Failed to fetch assignment requests", e); }
+    };
+
+    const handleSubmitAssignmentRequest = async () => {
+        if (!selectedTargetDept || selectedAssignSubjects.length === 0) {
+            showToast('Please select a department and at least one subject', 'error');
+            return;
+        }
+        setAssignLoading(true);
+        try {
+            const headers = { 'Authorization': `Bearer ${user.token}`, 'Content-Type': 'application/json' };
+            const body = JSON.stringify({
+                targetDepartment: selectedTargetDept,
+                subjects: selectedAssignSubjects.join(', '),
+                sections: assignSections,
+                semester: assignSemester
+            });
+            const res = await fetch(`${API_BASE_URL}/faculty/assignment-request`, { method: 'POST', headers, body });
+            const data = await res.json();
+            if (res.ok) {
+                showToast(data.message || 'Request submitted!');
+                setSelectedAssignSubjects([]);
+                setAssignSections('');
+                setAssignSemester('');
+                fetchMyAssignmentRequests();
+            } else {
+                showToast(data.message || 'Failed to submit request', 'error');
+            }
+        } catch (e) {
+            showToast('Network error', 'error');
+        }
+        setAssignLoading(false);
+    };
+
+    const renderDeptAssignment = () => {
+        // Fetch departments on first render of this section
+        if (allDepartments.length === 0) fetchAllDepartments();
+        if (myAssignmentRequests.length === 0) fetchMyAssignmentRequests();
+
+        const statusColors = { PENDING: '#f59e0b', APPROVED: '#10b981', REJECTED: '#ef4444' };
+        const statusBg = { PENDING: '#fef3c7', APPROVED: '#d1fae5', REJECTED: '#fef2f2' };
+
+        return (
+            <div>
+                {/* Request Form */}
+                <div className={styles.card} style={{ marginBottom: '1.5rem' }}>
+                    <div className={styles.cardHeader} style={{ marginBottom: '1rem' }}>
+                        <h2 className={styles.cardTitle} style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <Building2 size={22} /> Request Department Assignment
+                        </h2>
+                    </div>
+                    <p style={{ color: '#64748b', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
+                        Select a department and subjects you'd like to teach. The HOD of that department will review and approve your request.
+                    </p>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
+                        {/* Department Selector */}
+                        <div>
+                            <label className={styles.infoLabel} style={{ marginBottom: '0.5rem', display: 'block' }}>Target Department</label>
+                            <select
+                                className={styles.largeInput}
+                                value={selectedTargetDept}
+                                onChange={(e) => {
+                                    setSelectedTargetDept(e.target.value);
+                                    setSelectedAssignSubjects([]);
+                                    setDeptSubjects([]);
+                                    if (e.target.value) fetchDeptSubjects(e.target.value);
+                                }}
+                                style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '0.95rem' }}
+                            >
+                                <option value="">-- Select Department --</option>
+                                {allDepartments.filter(d => d !== user?.department).map(d => (
+                                    <option key={d} value={d}>{d}</option>
+                                ))}
+                            </select>
+                        </div>
+                        {/* Semester */}
+                        <div>
+                            <label className={styles.infoLabel} style={{ marginBottom: '0.5rem', display: 'block' }}>Semester</label>
+                            <input
+                                type="text"
+                                className={styles.largeInput}
+                                placeholder="e.g. 3"
+                                value={assignSemester}
+                                onChange={e => setAssignSemester(e.target.value)}
+                                style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '0.95rem' }}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Sections */}
+                    <div style={{ marginBottom: '1.5rem' }}>
+                        <label className={styles.infoLabel} style={{ marginBottom: '0.5rem', display: 'block' }}>Sections (comma-separated)</label>
+                        <input
+                            type="text"
+                            className={styles.largeInput}
+                            placeholder="e.g. A, B"
+                            value={assignSections}
+                            onChange={e => setAssignSections(e.target.value)}
+                            style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '0.95rem' }}
+                        />
+                    </div>
+
+                    {/* Subject Checkboxes */}
+                    {selectedTargetDept && (
+                        <div style={{ marginBottom: '1.5rem' }}>
+                            <label className={styles.infoLabel} style={{ marginBottom: '0.5rem', display: 'block' }}>Select Subjects</label>
+                            {deptSubjects.length === 0 ? (
+                                <p style={{ color: '#94a3b8', fontSize: '0.9rem' }}>No subjects found for this department.</p>
+                            ) : (
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '0.7rem' }}>
+                                    {deptSubjects.map(sub => (
+                                        <label
+                                            key={sub.id}
+                                            style={{
+                                                display: 'flex', alignItems: 'center', gap: '0.5rem',
+                                                padding: '0.6rem 0.8rem', borderRadius: '8px',
+                                                border: selectedAssignSubjects.includes(sub.name)
+                                                    ? '2px solid #2563eb' : '1px solid #e2e8f0',
+                                                background: selectedAssignSubjects.includes(sub.name)
+                                                    ? '#eff6ff' : '#fff',
+                                                cursor: 'pointer', transition: 'all 0.2s'
+                                            }}
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedAssignSubjects.includes(sub.name)}
+                                                onChange={(e) => {
+                                                    if (e.target.checked) {
+                                                        setSelectedAssignSubjects(prev => [...prev, sub.name]);
+                                                    } else {
+                                                        setSelectedAssignSubjects(prev => prev.filter(n => n !== sub.name));
+                                                    }
+                                                }}
+                                                style={{ accentColor: '#2563eb' }}
+                                            />
+                                            <div>
+                                                <span style={{ fontWeight: 500 }}>{sub.name}</span>
+                                                <span style={{ display: 'block', fontSize: '0.8rem', color: '#94a3b8' }}>{sub.code} • Sem {sub.semester}</span>
+                                            </div>
+                                        </label>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Submit */}
+                    <button
+                        className={styles.saveBtn}
+                        onClick={handleSubmitAssignmentRequest}
+                        disabled={assignLoading || !selectedTargetDept || selectedAssignSubjects.length === 0}
+                        style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.7rem 1.5rem', fontSize: '0.95rem' }}
+                    >
+                        <Send size={16} />
+                        {assignLoading ? 'Submitting...' : 'Send Request to HOD'}
+                    </button>
+                </div>
+
+                {/* My Requests History */}
+                <div className={styles.card}>
+                    <div className={styles.cardHeader} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                        <h2 className={styles.cardTitle} style={{ margin: 0 }}>My Assignment Requests</h2>
+                        <button
+                            className={styles.secondaryBtn}
+                            onClick={fetchMyAssignmentRequests}
+                            style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.85rem', padding: '0.4rem 0.8rem' }}
+                        >
+                            <RefreshCw size={14} /> Refresh
+                        </button>
+                    </div>
+                    {myAssignmentRequests.length > 0 ? (
+                        <div style={{ overflowX: 'auto' }}>
+                            <table className={styles.marksTable} style={{ width: '100%' }}>
+                                <thead>
+                                    <tr>
+                                        <th style={{ padding: '0.7rem' }}>Department</th>
+                                        <th style={{ padding: '0.7rem' }}>Subjects</th>
+                                        <th style={{ padding: '0.7rem' }}>Sections</th>
+                                        <th style={{ padding: '0.7rem' }}>Requested On</th>
+                                        <th style={{ padding: '0.7rem' }}>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {myAssignmentRequests.map(req => (
+                                        <tr key={req.id}>
+                                            <td style={{ padding: '0.7rem', fontWeight: 500 }}>{req.targetDepartment}</td>
+                                            <td style={{ padding: '0.7rem', fontSize: '0.9rem' }}>{req.subjects}</td>
+                                            <td style={{ padding: '0.7rem' }}>{req.sections || '-'}</td>
+                                            <td style={{ padding: '0.7rem', fontSize: '0.85rem', color: '#64748b' }}>
+                                                {req.requestDate ? new Date(req.requestDate).toLocaleDateString() : '-'}
+                                            </td>
+                                            <td style={{ padding: '0.7rem' }}>
+                                                <span style={{
+                                                    padding: '0.25rem 0.7rem',
+                                                    borderRadius: '12px',
+                                                    fontSize: '0.8rem',
+                                                    fontWeight: 600,
+                                                    color: statusColors[req.status] || '#64748b',
+                                                    background: statusBg[req.status] || '#f1f5f9'
+                                                }}>
+                                                    {req.status}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    ) : (
+                        <div className={styles.emptyState}>
+                            <Building2 size={48} style={{ color: '#cbd5e1' }} />
+                            <p>No assignment requests yet. Use the form above to request a cross-department teaching assignment.</p>
+                        </div>
+                    )}
+                </div>
+            </div>
+        );
+    };
+
     return (
         <DashboardLayout menuItems={menuItems} >
             <header className={styles.header}>
@@ -2638,6 +2906,7 @@ const FacultyDashboard = () => {
             {activeSection === 'Mentorship' && renderMentorship()}
             {activeSection === 'Low Performers' && renderLowPerformers()}
             {activeSection === 'Notifications' && renderNotifications()}
+            {activeSection === 'Dept Assignment' && renderDeptAssignment()}
 
             {/* MODALS */}
             {renderStudentProfileModal()}

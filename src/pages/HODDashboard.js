@@ -5,7 +5,7 @@ import DashboardLayout from '../components/DashboardLayout';
 import {
     LayoutDashboard, Users, FileText, CheckCircle, TrendingUp, BarChart2,
     AlertTriangle, Briefcase, Bell, Activity, Clock, Award,
-    Edit, Save, LogOut, ShieldAlert, X, BookOpen, Layers, Megaphone, Calendar, MapPin, PenTool, Download, Mail, Trash2, Key, UserPlus, Upload
+    Edit, Save, LogOut, ShieldAlert, X, BookOpen, Layers, Megaphone, Calendar, MapPin, PenTool, Download, Mail, Trash2, Key, UserPlus, Upload, GitPullRequest
 } from 'lucide-react';
 import {
     departments, subjectsByDept, getStudentsByDept, englishMarks, mathsMarks,
@@ -274,6 +274,7 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
         { label: 'IA Monitoring', path: '#monitoring', icon: <Activity size={20} />, isActive: activeTab === 'monitoring', onClick: () => setActiveTab('monitoring') },
         { label: 'Student Performance', path: '#performance', icon: <TrendingUp size={20} />, isActive: activeTab === 'performance', onClick: () => setActiveTab('performance') },
         { label: 'Faculty Management', path: '#faculty', icon: <Briefcase size={20} />, isActive: activeTab === 'faculty', onClick: () => setActiveTab('faculty') },
+        { label: 'Faculty Requests', path: '#faculty-requests', icon: <GitPullRequest size={20} />, isActive: activeTab === 'faculty-requests', onClick: () => setActiveTab('faculty-requests') },
         { label: 'All Students', path: '#all-students', icon: <Users size={20} />, isActive: activeTab === 'all-students', onClick: () => setActiveTab('all-students') },
         { label: 'Student Management', path: '#student-mgmt', icon: <UserPlus size={20} />, isActive: activeTab === 'student-mgmt', onClick: () => setActiveTab('student-mgmt') },
         { label: 'IA Approval Panel', path: '#approvals', icon: <CheckCircle size={20} />, isActive: activeTab === 'approvals', onClick: () => setActiveTab('approvals') },
@@ -287,20 +288,16 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
     const handleAddFaculty = async (e) => {
         if (e) e.preventDefault();
 
-        // Handle subjects specifically if they are comma separated
-        const data = { ...facultyForm };
-
-        let subjectsArray = [];
-        if (Array.isArray(data.subjects)) {
-            subjectsArray = data.subjects;
-        } else if (typeof data.subjects === 'string') {
-            subjectsArray = data.subjects.split(',').map(s => s.trim()).filter(s => s !== '');
+        const data = {
+            fullName: facultyForm.fullName,
+            username: facultyForm.username,
+            email: facultyForm.email,
+            designation: facultyForm.designation,
+            department: selectedDept
+        };
+        if (!editingFaculty && facultyForm.password) {
+            data.password = facultyForm.password;
         }
-
-        // Convert to string for backend
-        data.subjects = subjectsArray.join(', ');
-
-        data.department = selectedDept;
 
         try {
             const token = user?.token;
@@ -320,7 +317,7 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
                 alert(editingFaculty ? 'Faculty updated successfully!' : 'Faculty added successfully!');
                 setShowAddFacultyModal(false);
                 setEditingFaculty(null);
-                setFacultyForm({ fullName: '', username: '', email: '', password: 'password123', designation: 'Assistant Professor', semester: '', section: '', subjects: '' });
+                setFacultyForm({ fullName: '', username: '', email: '', password: 'password123', designation: 'Assistant Professor' });
                 fetchFaculty(); // Refresh the list
             } else {
                 const errData = await response.json().catch(() => ({ message: 'Error processing faculty' }));
@@ -339,29 +336,25 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
             fullName: fac.fullName || '',
             username: fac.username || '',
             email: fac.email || '',
-            password: '', // Password not pre-filled for editing
-            designation: fac.designation || 'Assistant Professor',
-            semester: fac.semester || '',
-            section: fac.section || '',
-            section: fac.section || '',
-            subjects: fac.subjects ? (Array.isArray(fac.subjects) ? fac.subjects.join(', ') : fac.subjects) : ''
+            password: '',
+            designation: fac.designation || 'Assistant Professor'
         });
         setShowAddFacultyModal(true);
     };
 
     const handleDeleteFaculty = async (facId) => {
-        if (!window.confirm('Are you sure you want to remove this faculty member? This will permanently delete their account.')) return;
+        if (!window.confirm(`Are you sure you want to remove this faculty from ${selectedDept} department? They will keep their assignments in other departments.`)) return;
 
         try {
             const token = user?.token;
             const headers = { ...(token ? { 'Authorization': `Bearer ${token}` } : {}) };
-            const response = await fetch(`${API_BASE_URL}/hod/faculty/${facId}`, {
+            const response = await fetch(`${API_BASE_URL}/hod/faculty/${facId}?department=${encodeURIComponent(selectedDept)}`, {
                 method: 'DELETE',
                 headers
             });
 
             if (response.ok) {
-                alert('Faculty removed successfully');
+                alert(`Faculty removed from ${selectedDept} successfully`);
                 fetchFaculty(); // Refresh the list
             } else {
                 const err = await response.json().catch(() => ({ message: 'Error removing faculty' }));
@@ -1755,41 +1748,7 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
                                         Status: <span className={`${styles.statusBadge} ${viewingSubject.status === 'Approved' ? styles.approved : viewingSubject.status === 'Submitted' ? styles.submitted : styles.pending}`} style={{ marginLeft: '10px' }}>{viewingSubject.status}</span>
                                     </p><div className={styles.tableWrapper}><table className={styles.table}><thead><tr><th>Sl. No.</th><th>Reg No</th><th>Student Name</th><th>CIE-1</th><th>CIE-2</th><th>CIE-3</th><th>CIE-4</th><th>CIE-5</th><th>Total</th></tr></thead><tbody>{(() => { const subjectMarks = subjectMarksData[viewingSubject.name] || []; const studentsToShow = viewingSubject.status === 'Pending' ? deptStudents.filter(student => { const studentMark = subjectMarks.find(m => m.student?.regNo === student.regNo); return !studentMark || (studentMark.cie1Score === null && studentMark.cie2Score === null && studentMark.cie3Score === null); }) : deptStudents; return studentsToShow.map((student, index) => { const studentMark = subjectMarks.find(m => m.student?.regNo === student.regNo); const cie1 = studentMark?.cie1Score ?? '-'; const cie2 = studentMark?.cie2Score ?? '-'; const cie3 = studentMark?.cie3Score ?? '-'; const cie4 = studentMark?.cie4Score ?? '-'; const cie5 = studentMark?.cie5Score ?? '-'; const total = (studentMark?.cie1Score || 0) + (studentMark?.cie2Score || 0) + (studentMark?.cie3Score || 0) + (studentMark?.cie4Score || 0) + (studentMark?.cie5Score || 0); return (<tr key={student.id}><td>{index + 1}</td><td>{student.regNo}</td><td>{student.name}</td><td>{cie1}</td><td>{cie2}</td><td>{cie3}</td><td>{cie4}</td><td>{cie5}</td><td style={{ fontWeight: 'bold' }}>{studentMark ? total : '-'}</td></tr>); }); })()}</tbody></table></div></div></div></div>)}</div>)}
             {activeTab === 'performance' && (<div className={styles.performanceContainer}><div className={styles.statsRow}><div className={styles.statCard}><div className={`${styles.iconBox} ${styles.blue}`}><Users size={24} /></div><div className={styles.statInfo}><p>Total Students</p><h3>{deptStudents.length || 0}</h3></div></div><div className={styles.statCard}><div className={`${styles.iconBox} ${styles.green}`}><TrendingUp size={24} /></div><div className={styles.statInfo}><p>Class Average</p><h3>{analytics?.average || 0}/50</h3></div></div><div className={styles.statCard}><div className={`${styles.iconBox} ${styles.purple}`}><Award size={24} /></div><div className={styles.statInfo}><p>Pass Rate</p><h3>{analytics?.passPercentage || 0}%</h3></div></div><div className={styles.statCard}><div className={`${styles.iconBox} ${styles.orange}`}><AlertTriangle size={24} /></div><div className={styles.statInfo}><p>At Risk</p><h3>{analytics?.atRiskCount || 0}</h3></div></div></div><div className={styles.gridTwo}><div className={styles.card}><div className={styles.cardHeader}><h3>CIE Performance Trend</h3><select className={styles.deptSelect} style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }} value={performanceSubjectId} onChange={(e) => setPerformanceSubjectId(e.target.value)}><option value="all">All Subjects</option>{subjects.filter(s => s.name !== 'IC').map(s => (<option key={s.id} value={s.id}>{s.name}</option>))}</select></div><div className={styles.chartContainer}><Bar data={{ labels: ['CIE-1', 'CIE-2', 'CIE-3', 'CIE-4', 'CIE-5'], datasets: [{ label: 'Class Average', data: cieTrendData, backgroundColor: ['#3b82f6', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b'], borderRadius: 8 }] }} options={{ ...commonOptions, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, max: 50 } } }} /></div></div><div className={styles.card}><div className={styles.cardHeader}><h3>Grade Distribution</h3></div><div className={styles.doughnutContainer}><Doughnut data={hodGradeDistribution} options={doughnutOptions} /></div></div></div><div className={styles.card} style={{ marginTop: '1.5rem' }}><div className={styles.cardHeader}><h3>Subject-wise Performance</h3></div><table className={styles.table}><thead><tr><th>Subject</th><th>CIE-1 Avg</th><th>CIE-2 Avg</th><th>CIE-3 Avg</th><th>CIE-4 Avg</th><th>CIE-5 Avg</th><th>Overall</th><th>Pass %</th></tr></thead><tbody>{allSubjectPerformance.map((item) => (<tr key={item.id}><td style={{ fontWeight: 600 }}>{item.name}</td>{['CIE1', 'CIE2', 'CIE3', 'CIE4', 'CIE5'].map((cieType) => { const avg = item.averages[cieType] || 0; return (<td key={cieType}><span style={{ color: avg >= 40 ? '#16a34a' : avg >= 30 ? '#ca8a04' : '#dc2626', fontWeight: 500 }}>{avg}/50</span></td>); })}<td style={{ fontWeight: 700 }}>{item.overall}/50</td><td><span className={`${styles.statusBadge} ${item.passRate >= 80 ? styles.approved : item.passRate >= 60 ? styles.submitted : styles.pending}`}>{item.passRate}%</span></td></tr>))}</tbody></table></div><div className={styles.card} style={{ marginTop: '1.5rem' }}><div className={styles.cardHeader}><h3 style={{ color: '#dc2626' }}>⚠️ At-Risk Students (Action Required)</h3><button className={styles.secondaryBtn} style={{ fontSize: '0.85rem' }}><Download size={14} /> Export List</button></div><table className={styles.table}><thead><tr><th>Reg No</th><th>Student Name</th><th>CIE Average</th><th>Issue</th><th>Action</th></tr></thead><tbody>{atRiskStudents.map((student) => (<tr key={student.id}><td>{student.rollNo}</td><td style={{ fontWeight: 500 }}>{student.name}</td><td><span style={{ color: student.avgMarks < 20 ? '#dc2626' : '#ca8a04', fontWeight: 600 }}>{student.avgMarks}/50</span></td><td><span className={styles.issueTag}>{student.issue}</span></td><td><div style={{ display: 'flex', gap: '0.5rem' }}><button className={styles.secondaryBtn} style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem' }} onClick={() => alert(`Sending notification to ${student.name}`)}>Notify</button><button className={styles.secondaryBtn} style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem', background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca' }} onClick={() => alert(`Scheduling meeting with ${student.name}`)}>Meet</button></div></td></tr>))}</tbody></table></div></div>)}
-            {activeTab === 'faculty' && (<div className={styles.facultyContainer}><div className={styles.card}><div className={styles.cardHeader}><h3>Department Faculty ({facultyList.length})</h3><div style={{ display: 'flex', gap: '1rem', position: 'relative' }}><button className={styles.primaryBtn} onClick={() => { setEditingFaculty(null); setFacultyForm({ fullName: '', username: '', email: '', password: 'password123', designation: 'Assistant Professor', subjects: '' }); setShowAddFacultyModal(true); }} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Users size={16} /> Add New Faculty</button><div style={{ position: 'relative' }}><button className={styles.secondaryBtn} onClick={() => setShowEditSelection(!showEditSelection)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#f8fafc', border: '1px solid #e2e8f0' }}><Edit size={16} /> Edit Faculty</button>{showEditSelection && (<div style={{ position: 'absolute', top: '110%', right: 0, width: '250px', background: 'white', borderRadius: '8px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0', zIndex: 100, padding: '0.5rem' }}><p style={{ padding: '0.5rem', fontSize: '0.85rem', color: '#64748b', borderBottom: '1px solid #f1f5f9', marginBottom: '0.5rem' }}>Select Faculty to Edit:</p><div style={{ maxHeight: '300px', overflowY: 'auto' }}>{facultyList.map(fac => (<button key={fac.id} onClick={() => { handleEditFaculty(fac); setShowEditSelection(false); }} style={{ width: '100%', textAlign: 'left', padding: '0.75rem', borderRadius: '6px', border: 'none', background: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '2px', transition: 'background 0.2s' }} onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'} onMouseLeave={e => e.currentTarget.style.background = 'none'}><span style={{ fontWeight: 600, fontSize: '0.9rem', color: '#1e293b' }}>{fac.fullName || fac.username}</span><small style={{ color: '#64748b' }}>{fac.designation || 'Faculty'}</small></button>))}</div></div>)}</div></div></div><div className={styles.facultyList} style={{ marginTop: '1.5rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(300px,1fr))', gap: '1.5rem' }}>{facultyList.length > 0 ? facultyList.map(fac => (<div key={fac.id} className={styles.facultyItem} style={{ border: '1px solid #e2e8f0', borderRadius: '12px', padding: '1.5rem', background: 'white', display: 'flex', flexDirection: 'column' }}><div className={styles.facProfile} style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: '1rem' }}><div className={styles.avatarSm} style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '1.2rem' }}>{fac.fullName ? fac.fullName.charAt(0) : fac.username.charAt(0)}</div><div style={{ flex: 1 }}><p className={styles.facName} style={{ fontWeight: 600, fontSize: '1.1rem', color: '#1e293b', margin: 0 }}>{fac.fullName || fac.username}</p><small className={styles.facStatus} style={{ color: '#64748b' }}>{fac.designation || 'Faculty Member'}</small>{(fac.semester || fac.section) && (<small style={{ color: '#2563eb', fontWeight: 500, fontSize: '0.8rem', marginTop: '2px', display: 'block' }}>Class Teacher: {fac.semester ? `${fac.semester} Sem` : ''} {fac.section ? `- Sec ${fac.section}` : ''}</small>)}</div></div><div style={{ marginBottom: '1rem', flex: 1 }}><span style={{ fontSize: '0.85rem', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase' }}>Subjects ({parseSubjects(fac.subjects).length})</span><div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.5rem' }}>{parseSubjects(fac.subjects).length > 0 ? parseSubjects(fac.subjects).map((sub, i) => (<span key={i} style={{ fontSize: '0.8rem', background: '#f1f5f9', padding: '4px 8px', borderRadius: '4px', color: '#475569' }}>{sub}</span>)) : (<span style={{ fontSize: '0.8rem', color: '#cbd5e1' }}>No active subjects assigned</span>)}</div></div><div className={styles.facActions} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}><button className={styles.viewBtn} style={{ gridColumn: 'span 2' }} onClick={() => handleViewDashboard(fac)}><LayoutDashboard size={16} /> View Dashboard</button><button className={styles.msgBtn} onClick={() => handleMessage(fac)}><Mail size={16} /> Message</button><button className={styles.secondaryBtn} onClick={() => handleEditFaculty(fac)} style={{ border: '1px solid #e2e8f0', background: 'white', color: '#475569' }}><Edit size={16} /> Edit</button><button className={styles.secondaryBtn} onClick={() => openResetPasswordModal(fac.username, fac.fullName || fac.username, 'FACULTY')} style={{ border: '1px solid #fde68a', background: '#fef3c7', color: '#d97706' }}><Key size={14} /> Reset</button><button className={styles.secondaryBtn} onClick={() => handleDeleteFaculty(fac.id)} style={{ border: '1px solid #fee2e2', background: '#fef2f2', color: '#dc2626' }}><Trash2 size={16} /> Remove</button></div></div>)) : (<div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '3rem', color: '#64748b' }}><Users size={48} style={{ marginBottom: '1rem', color: '#cbd5e1' }} /><p>No faculty members found for this department.</p></div>)}</div></div>{showAddFacultyModal && (<div className={styles.modalOverlay}><div className={styles.modalContent} style={{ maxWidth: '500px' }}><div className={styles.modalHeader}><h3>{editingFaculty ? 'Edit Faculty' : 'Add New Faculty'}</h3><button className={styles.closeBtn} onClick={() => setShowAddFacultyModal(false)}><X size={24} /></button></div><div className={styles.modalBody}><form onSubmit={handleAddFaculty} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}><div className={styles.formGroup}><label>Full Name</label><input value={facultyForm.fullName} onChange={e => setFacultyForm({ ...facultyForm, fullName: e.target.value })} required placeholder="e.g. Dr. John Doe" className={styles.input} /></div><div className={styles.formGroup}><label>Username</label><input value={facultyForm.username} onChange={e => setFacultyForm({ ...facultyForm, username: e.target.value })} required placeholder="jdoe" className={styles.input} />{editingFaculty && <small style={{ color: '#64748b', fontSize: '0.75rem' }}>⚠️ Changing the username will update the faculty's login ID.</small>}</div><div className={styles.formGroup}><label>Email</label><input value={facultyForm.email} onChange={e => setFacultyForm({ ...facultyForm, email: e.target.value })} type="email" required placeholder="john@college.edu" className={styles.input} /></div>{!editingFaculty && (<div className={styles.formGroup}><label>Temporary Password</label><input value={facultyForm.password} onChange={e => setFacultyForm({ ...facultyForm, password: e.target.value })} required placeholder="password123" className={styles.input} /></div>)}<div className={styles.formGroup}><label>Designation</label><select value={facultyForm.designation} onChange={e => setFacultyForm({ ...facultyForm, designation: e.target.value })} className={styles.input}><option>Assistant Professor</option><option>Associate Professor</option><option>Professor</option><option>Guest Faculty</option></select></div><div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}><div className={styles.formGroup}><label>Class Teacher - Semester</label><select value={facultyForm.semester} onChange={e => setFacultyForm({ ...facultyForm, semester: e.target.value })} className={styles.input}><option value="">-- Select --</option><option value="1">1st Semester</option><option value="2">2nd Semester</option><option value="3">3rd Semester</option><option value="4">4th Semester</option><option value="5">5th Semester</option><option value="6">6th Semester</option></select></div><div className={styles.formGroup}><label>Section(s)</label><div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '0.65rem 0.75rem', minHeight: '42px', background: 'white' }}>{['A', 'B', 'C', 'D'].map(sec => (<label key={sec} style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', fontSize: '0.9rem' }}><input type="checkbox" checked={parseSubjects(facultyForm.section).includes(sec)} onChange={(e) => { const current = parseSubjects(facultyForm.section); let updated; if (e.target.checked) { updated = [...new Set([...current, sec])].sort().join(','); } else { updated = current.filter(s => s !== sec).join(','); } setFacultyForm({ ...facultyForm, section: updated }); }} /> {sec}</label>))}</div><small style={{ color: `#64748b`, fontSize: `0.75rem`, marginTop: `4px` }}>Select sections this faculty will teach.</small></div></div><div className={styles.formGroup}>
-                <label>Assigned Subjects</label>
-                <div style={{ maxHeight: '150px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '0.5rem' }}>
-                    {subjects.filter(s => s.department === selectedDept).map(sub => (
-                        <label key={sub.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 0', cursor: 'pointer' }}>
-                            <input
-                                type="checkbox"
-                                checked={Array.isArray(facultyForm.subjects)
-                                    ? facultyForm.subjects.includes(sub.name)
-                                    : (typeof facultyForm.subjects === 'string' && facultyForm.subjects.includes(sub.name))}
-                                onChange={(e) => {
-                                    const subName = sub.name;
-                                    let current = [];
-                                    if (Array.isArray(facultyForm.subjects)) {
-                                        current = [...facultyForm.subjects];
-                                    } else if (typeof facultyForm.subjects === 'string') {
-                                        const trimmed = facultyForm.subjects.trim();
-                                        current = trimmed ? trimmed.split(',').map(s => s.trim()).filter(s => s) : [];
-                                    }
-
-                                    if (e.target.checked) {
-                                        if (!current.includes(subName)) current.push(subName);
-                                    } else {
-                                        current = current.filter(s => s !== subName);
-                                    }
-                                    setFacultyForm({ ...facultyForm, subjects: current });
-                                }}
-                            />
-                            <span style={{ fontSize: '0.9rem', color: '#334155' }}>{sub.name}</span>
-                        </label>
-                    ))}
-                    {subjects.filter(s => s.department === selectedDept).length === 0 && <p style={{ color: '#94a3b8', fontSize: '0.85rem', textAlign: 'center' }}>No subjects found for this department.</p>}
-                </div>
-                <small style={{ color: '#64748b', fontSize: '0.75rem' }}>Select the subjects this faculty will teach.</small>
-            </div><div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1rem' }}><button type="button" className={styles.secondaryBtn} onClick={() => setShowAddFacultyModal(false)}>Cancel</button><button type="submit" className={styles.primaryBtn} style={{ background: '#2563eb', color: 'white' }}>{editingFaculty ? 'Update Faculty' : 'Create Account'}</button></div></form></div></div></div>)}
+            {activeTab === 'faculty' && (<div className={styles.facultyContainer}><div className={styles.card}><div className={styles.cardHeader}><h3>Department Faculty ({facultyList.length})</h3><div style={{ display: 'flex', gap: '1rem', position: 'relative' }}><button className={styles.primaryBtn} onClick={() => { setEditingFaculty(null); setFacultyForm({ fullName: '', username: '', email: '', password: 'password123', designation: 'Assistant Professor', subjects: '' }); setShowAddFacultyModal(true); }} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Users size={16} /> Add New Faculty</button><div style={{ position: 'relative' }}><button className={styles.secondaryBtn} onClick={() => setShowEditSelection(!showEditSelection)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#f8fafc', border: '1px solid #e2e8f0' }}><Edit size={16} /> Edit Faculty</button>{showEditSelection && (<div style={{ position: 'absolute', top: '110%', right: 0, width: '250px', background: 'white', borderRadius: '8px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0', zIndex: 100, padding: '0.5rem' }}><p style={{ padding: '0.5rem', fontSize: '0.85rem', color: '#64748b', borderBottom: '1px solid #f1f5f9', marginBottom: '0.5rem' }}>Select Faculty to Edit:</p><div style={{ maxHeight: '300px', overflowY: 'auto' }}>{facultyList.map(fac => (<button key={fac.id} onClick={() => { handleEditFaculty(fac); setShowEditSelection(false); }} style={{ width: '100%', textAlign: 'left', padding: '0.75rem', borderRadius: '6px', border: 'none', background: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '2px', transition: 'background 0.2s' }} onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'} onMouseLeave={e => e.currentTarget.style.background = 'none'}><span style={{ fontWeight: 600, fontSize: '0.9rem', color: '#1e293b' }}>{fac.fullName || fac.username}</span><small style={{ color: '#64748b' }}>{fac.designation || 'Faculty'}</small></button>))}</div></div>)}</div></div></div><div className={styles.facultyList} style={{ marginTop: '1.5rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(300px,1fr))', gap: '1.5rem' }}>{facultyList.length > 0 ? facultyList.map(fac => (<div key={fac.id} className={styles.facultyItem} style={{ border: '1px solid #e2e8f0', borderRadius: '12px', padding: '1.5rem', background: 'white', display: 'flex', flexDirection: 'column' }}><div className={styles.facProfile} style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: '1rem' }}><div className={styles.avatarSm} style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '1.2rem' }}>{fac.fullName ? fac.fullName.charAt(0) : fac.username.charAt(0)}</div><div style={{ flex: 1 }}><p className={styles.facName} style={{ fontWeight: 600, fontSize: '1.1rem', color: '#1e293b', margin: 0 }}>{fac.fullName || fac.username}</p><small className={styles.facStatus} style={{ color: '#64748b' }}>{fac.designation || 'Faculty Member'}</small>{(fac.semester || fac.section) && (<small style={{ color: '#2563eb', fontWeight: 500, fontSize: '0.8rem', marginTop: '2px', display: 'block' }}>Class Teacher: {fac.semester ? `${fac.semester} Sem` : ''} {fac.section ? `- Sec ${fac.section}` : ''}</small>)}</div></div><div style={{ marginBottom: '1rem', flex: 1 }}><span style={{ fontSize: '0.85rem', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase' }}>Subjects ({parseSubjects(fac.subjects).length})</span><div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.5rem' }}>{parseSubjects(fac.subjects).length > 0 ? parseSubjects(fac.subjects).map((sub, i) => (<span key={i} style={{ fontSize: '0.8rem', background: '#f1f5f9', padding: '4px 8px', borderRadius: '4px', color: '#475569' }}>{sub}</span>)) : (<span style={{ fontSize: '0.8rem', color: '#cbd5e1' }}>No active subjects assigned</span>)}</div></div><div className={styles.facActions} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}><button className={styles.viewBtn} style={{ gridColumn: 'span 2' }} onClick={() => handleViewDashboard(fac)}><LayoutDashboard size={16} /> View Dashboard</button><button className={styles.msgBtn} onClick={() => handleMessage(fac)}><Mail size={16} /> Message</button><button className={styles.secondaryBtn} onClick={() => handleEditFaculty(fac)} style={{ border: '1px solid #e2e8f0', background: 'white', color: '#475569' }}><Edit size={16} /> Edit</button><button className={styles.secondaryBtn} onClick={() => openResetPasswordModal(fac.username, fac.fullName || fac.username, 'FACULTY')} style={{ border: '1px solid #fde68a', background: '#fef3c7', color: '#d97706' }}><Key size={14} /> Reset</button><button className={styles.secondaryBtn} onClick={() => handleDeleteFaculty(fac.id)} style={{ border: '1px solid #fee2e2', background: '#fef2f2', color: '#dc2626' }}><Trash2 size={16} /> Remove</button></div></div>)) : (<div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '3rem', color: '#64748b' }}><Users size={48} style={{ marginBottom: '1rem', color: '#cbd5e1' }} /><p>No faculty members found for this department.</p></div>)}</div></div>{showAddFacultyModal && (<div className={styles.modalOverlay}><div className={styles.modalContent} style={{ maxWidth: '500px' }}><div className={styles.modalHeader}><h3>{editingFaculty ? 'Edit Faculty' : 'Add New Faculty'}</h3><button className={styles.closeBtn} onClick={() => setShowAddFacultyModal(false)}><X size={24} /></button></div><div className={styles.modalBody}><form onSubmit={handleAddFaculty} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}><div className={styles.formGroup}><label>Full Name</label><input value={facultyForm.fullName} onChange={e => setFacultyForm({ ...facultyForm, fullName: e.target.value })} required placeholder="e.g. Dr. John Doe" className={styles.input} /></div><div className={styles.formGroup}><label>Username</label><input value={facultyForm.username} onChange={e => setFacultyForm({ ...facultyForm, username: e.target.value })} required placeholder="jdoe" className={styles.input} />{editingFaculty && <small style={{ color: '#64748b', fontSize: '0.75rem' }}>⚠️ Changing the username will update the faculty's login ID.</small>}</div><div className={styles.formGroup}><label>Email</label><input value={facultyForm.email} onChange={e => setFacultyForm({ ...facultyForm, email: e.target.value })} type="email" required placeholder="john@college.edu" className={styles.input} /></div>{!editingFaculty && (<div className={styles.formGroup}><label>Temporary Password</label><input value={facultyForm.password} onChange={e => setFacultyForm({ ...facultyForm, password: e.target.value })} required placeholder="password123" className={styles.input} /></div>)}<div className={styles.formGroup}><label>Designation</label><select value={facultyForm.designation} onChange={e => setFacultyForm({ ...facultyForm, designation: e.target.value })} className={styles.input}><option>Assistant Professor</option><option>Associate Professor</option><option>Professor</option><option>Guest Faculty</option></select></div><div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1rem' }}><button type="button" className={styles.secondaryBtn} onClick={() => setShowAddFacultyModal(false)}>Cancel</button><button type="submit" className={styles.primaryBtn} style={{ background: '#2563eb', color: 'white' }}>{editingFaculty ? 'Update Faculty' : 'Create Account'}</button></div></form></div></div></div>)}
                 {viewingFaculty && (<div className={styles.modalOverlay} onClick={() => setViewingFaculty(null)}><div className={styles.modalContent} style={{ maxWidth: '700px' }} onClick={e => e.stopPropagation()}><div className={styles.modalHeader}><div><h2 style={{ fontSize: '1.25rem', fontWeight: 600 }}>{viewingFaculty.fullName || viewingFaculty.username}</h2><span className={styles.badge} style={{ position: 'static', padding: '2px 8px', borderRadius: '4px', background: '#eff6ff', color: '#2563eb', fontWeight: 500, fontSize: '0.85rem' }}>Dashboard Overview</span></div><button className={styles.closeBtn} onClick={() => setViewingFaculty(null)}><X size={24} /></button></div><div className={styles.modalBody}>{(() => {
                     let totalAvg = 0;
                     let evaluatedCount = 0;
@@ -1918,8 +1877,186 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
             </div>)}
             {activeTab === 'cie-schedule' && (<div className={styles.cieScheduleContainer}><div className={styles.gridTwo}><div className={styles.card}><h3>{editingScheduleId ? 'Edit CIE Exam Schedule' : 'Schedule New CIE Exam'}</h3><form onSubmit={handleScheduleSubmit} id="scheduleFormSection" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}><div className={styles.formGroup}><label>Select Subject</label><select name="subjectId" required className={styles.deptSelect} style={{ width: '100%' }}><option value="">-- Choose Subject --</option>{subjects.map(sub => (<option key={sub.id} value={sub.id}>{sub.name} ({sub.code})</option>))}</select></div><div className={styles.formGroup}><label>CIE Number</label><div style={{ display: 'flex', gap: '0.5rem' }}>{[1, 2, 3, 4, 5].map(num => (<label key={num} style={{ flex: 1, padding: '0.75rem', border: '1px solid #cbd5e1', borderRadius: '8px', textAlign: 'center', cursor: 'pointer', background: scheduleForm.cieNumber === num ? '#eff6ff' : 'white', borderColor: scheduleForm.cieNumber === num ? '#3b82f6' : '#cbd5e1', color: scheduleForm.cieNumber === num ? '#2563eb' : '#64748b', fontWeight: scheduleForm.cieNumber === num ? '600' : '400' }}><input type="radio" name="cieNumber" value={num} checked={scheduleForm.cieNumber === num} onChange={() => setScheduleForm({ ...scheduleForm, cieNumber: num })} style={{ display: 'none' }} />CIE-{num}</label>))}</div></div><div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}><div className={styles.formGroup}><label>Date</label><input type="date" name="scheduledDate" required className={styles.input} /></div><div className={styles.formGroup}><label>Time</label><input type="time" name="startTime" required className={styles.input} /></div></div><div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}><div className={styles.formGroup}><label>Duration (mins)</label><input type="number" name="durationMinutes" defaultValue="60" className={styles.input} /></div><div className={styles.formGroup}><label>Room / Hall</label><input name="examRoom" placeholder="e.g. LH-201" className={styles.input} /></div></div><div className={styles.formGroup}><label>Integration Instructions (Optional)</label><textarea name="instructions" placeholder="Special instructions for faculty/students..." className={styles.input} style={{ minHeight: '80px', resize: 'vertical' }}></textarea></div><div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>{editingScheduleId && (<button type="button" className={styles.secondaryBtn} onClick={cancelEdit} style={{ flex: 1, justifyContent: 'center' }}>Cancel</button>)}<button type="submit" className={styles.primaryBtn} style={{ flex: 2, justifyContent: 'center' }}><Megaphone size={18} /> {editingScheduleId ? 'Update Schedule' : 'Publish Schedule'}</button></div></form></div><div className={styles.card}><h3>Upcoming Scheduled Exams</h3><div className={styles.alertList}>{departmentAnnouncements.length > 0 ? departmentAnnouncements.map(ann => (<div key={ann.id} className={`${styles.alertItem} ${styles.info}`} style={{ alignItems: 'center' }}><div style={{ background: 'white', padding: '0.5rem', borderRadius: '8px', textAlign: 'center', minWidth: '60px' }}><span style={{ display: 'block', fontSize: '1.2rem', fontWeight: 'bold', color: '#2563eb' }}>{new Date(ann.scheduledDate).getDate()}</span><span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#64748b' }}>{new Date(ann.scheduledDate).toLocaleString('default', { month: 'short' })}</span></div><div style={{ flex: 1 }}><div style={{ display: 'flex', justifyContent: 'space-between' }}><h4 style={{ margin: '0 0 0.25rem', fontSize: '1rem', color: '#1e293b' }}>{ann.subject ? ann.subject.name : 'Unknown Subject'} <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 'normal' }}>({ann.subject?.code})</span></h4><span className={styles.statusBadge} style={{ background: '#dbeafe', color: '#1e40af' }}>CIE-{ann.cieNumber}</span></div><p style={{ display: 'flex', gap: '1rem', alignItems: 'center', color: '#475569', fontSize: '0.85rem' }}><span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Clock size={12} /> {ann.startTime || '10:00 AM'} ({ann.durationMinutes}m)</span>{ann.examRoom && <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><MapPin size={12} /> {ann.examRoom}</span>}</p></div><div style={{ display: 'flex', gap: '8px' }}><button className={styles.iconBtn} onClick={() => handleEditSchedule(ann)} title="Edit" style={{ color: '#2563eb', background: '#dbeafe' }}><Edit size={16} /></button><button className={styles.iconBtn} onClick={() => handleDeleteSchedule(ann.id)} title="Delete" style={{ color: '#dc2626', background: '#fee2e2' }}><Trash2 size={16} /></button></div></div>)) : (<div style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8' }}>No exams scheduled yet.</div>)}</div></div></div></div>)}
             {activeTab === 'reports' && (<div className={styles.sectionContainer}><h2 className={styles.sectionTitle}>Reports & Archives</h2><div className={styles.cardsGrid}><div className={styles.card}><div className={styles.cardHeader}><h3 className={styles.cardTitle}>IA Marks Report</h3></div><div style={{ padding: '1rem', color: '#666' }}><p>Download comprehensive PDF report of IA marks for all subjects in {selectedDept}.</p><button className={styles.primaryBtn} style={{ marginTop: '1rem', width: '100%', justifyContent: 'center' }} onClick={() => window.open(`${API_BASE_URL}/reports/marks/${selectedDept}/pdf`, '_blank')}><Download size={18} /> Download PDF</button></div></div></div></div>)}
+            {activeTab === 'faculty-requests' && renderFacultyRequests()}
         </>
     );
+
+
+    // ========== FACULTY ASSIGNMENT REQUESTS ==========
+    const [pendingAssignments, setPendingAssignments] = useState([]);
+    const [assignReqLoading, setAssignReqLoading] = useState(false);
+
+    const fetchPendingAssignments = async () => {
+        if (!selectedDept || !user?.token) return;
+        setAssignReqLoading(true);
+        try {
+            const headers = { 'Authorization': `Bearer ${user.token}` };
+            const res = await fetch(`${API_BASE_URL}/hod/assignment-requests?department=${encodeURIComponent(selectedDept)}&status=ALL`, { headers });
+            if (res.ok) {
+                const data = await res.json();
+                setPendingAssignments(data);
+            }
+        } catch (e) { console.error("Failed to fetch assignment requests", e); }
+        setAssignReqLoading(false);
+    };
+
+    const handleApproveRequest = async (requestId) => {
+        if (!window.confirm('Are you sure you want to approve this assignment request?')) return;
+        try {
+            const headers = { 'Authorization': `Bearer ${user.token}`, 'Content-Type': 'application/json' };
+            const res = await fetch(`${API_BASE_URL}/hod/assignment-requests/${requestId}/approve`, { method: 'PUT', headers });
+            const data = await res.json();
+            if (res.ok) {
+                alert(data.message || 'Request approved!');
+                fetchPendingAssignments();
+                // Refresh faculty list too
+                const facRes = await fetch(`${API_BASE_URL}/hod/faculty?department=${selectedDept}`, { headers });
+                if (facRes.ok) setFacultyList(await facRes.json());
+            } else {
+                alert(data.message || 'Failed to approve');
+            }
+        } catch (e) { alert('Error approving request'); }
+    };
+
+    const handleRejectRequest = async (requestId) => {
+        if (!window.confirm('Are you sure you want to reject this assignment request?')) return;
+        try {
+            const headers = { 'Authorization': `Bearer ${user.token}`, 'Content-Type': 'application/json' };
+            const res = await fetch(`${API_BASE_URL}/hod/assignment-requests/${requestId}/reject`, { method: 'PUT', headers });
+            const data = await res.json();
+            if (res.ok) {
+                alert(data.message || 'Request rejected');
+                fetchPendingAssignments();
+            } else {
+                alert(data.message || 'Failed to reject');
+            }
+        } catch (e) { alert('Error rejecting request'); }
+    };
+
+    const renderFacultyRequests = () => {
+        if (pendingAssignments.length === 0 && !assignReqLoading) fetchPendingAssignments();
+
+        const statusColors = { PENDING: '#f59e0b', APPROVED: '#10b981', REJECTED: '#ef4444' };
+        const statusBg = { PENDING: '#fef3c7', APPROVED: '#d1fae5', REJECTED: '#fef2f2' };
+
+        const pending = pendingAssignments.filter(r => r.status === 'PENDING');
+        const processed = pendingAssignments.filter(r => r.status !== 'PENDING');
+
+        return (
+            <div className={styles.facultyContainer}>
+                <div className={styles.card}>
+                    <div className={styles.cardHeader} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <h3><GitPullRequest size={20} style={{ marginRight: '0.5rem', verticalAlign: 'middle' }} />
+                            Cross-Department Faculty Requests
+                            {pending.length > 0 && (
+                                <span style={{ marginLeft: '0.5rem', padding: '2px 10px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: 600, background: '#fef3c7', color: '#f59e0b' }}>{pending.length} Pending</span>
+                            )}
+                        </h3>
+                        <button className={styles.secondaryBtn} onClick={fetchPendingAssignments} style={{ fontSize: '0.85rem', padding: '0.4rem 0.8rem' }}>
+                            Refresh
+                        </button>
+                    </div>
+
+                    {/* Pending Requests */}
+                    {pending.length > 0 ? (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '1rem', marginTop: '1rem' }}>
+                            {pending.map(req => (
+                                <div key={req.id} style={{ border: '2px solid #fde68a', borderRadius: '12px', padding: '1.25rem', background: '#fffbeb' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
+                                        <div>
+                                            <span style={{ fontWeight: 700, fontSize: '1.05rem', color: '#1e293b' }}>{req.facultyName}</span>
+                                            <span style={{ display: 'block', fontSize: '0.8rem', color: '#64748b', marginTop: '2px' }}>Faculty ID: {req.facultyId}</span>
+                                        </div>
+                                        <span style={{ padding: '0.2rem 0.6rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 600, color: statusColors[req.status], background: statusBg[req.status] }}>
+                                            {req.status}
+                                        </span>
+                                    </div>
+                                    <div style={{ marginBottom: '0.75rem' }}>
+                                        <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#64748b', textTransform: 'uppercase' }}>Requested Subjects</span>
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.3rem' }}>
+                                            {req.subjects.split(',').map((sub, i) => (
+                                                <span key={i} style={{ fontSize: '0.8rem', background: '#fff', padding: '3px 8px', borderRadius: '4px', border: '1px solid #e2e8f0', color: '#475569' }}>
+                                                    {sub.trim()}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    {req.sections && (
+                                        <div style={{ marginBottom: '0.75rem', fontSize: '0.85rem', color: '#64748b' }}>
+                                            <strong>Sections:</strong> {req.sections}
+                                        </div>
+                                    )}
+                                    <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: '1rem' }}>
+                                        Requested: {req.requestDate ? new Date(req.requestDate).toLocaleString() : '-'}
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                        <button
+                                            className={styles.primaryBtn}
+                                            onClick={() => handleApproveRequest(req.id)}
+                                            style={{ flex: 1, justifyContent: 'center', background: '#16a34a', padding: '0.5rem' }}
+                                        >
+                                            <CheckCircle size={16} /> Approve
+                                        </button>
+                                        <button
+                                            className={styles.secondaryBtn}
+                                            onClick={() => handleRejectRequest(req.id)}
+                                            style={{ flex: 1, justifyContent: 'center', color: '#dc2626', borderColor: '#fecaca', background: '#fef2f2', padding: '0.5rem' }}
+                                        >
+                                            <X size={16} /> Reject
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8' }}>
+                            <GitPullRequest size={48} style={{ marginBottom: '0.5rem', color: '#cbd5e1' }} />
+                            <p>No pending faculty assignment requests for {selectedDept}.</p>
+                        </div>
+                    )}
+                </div>
+
+                {/* Processed Requests History */}
+                {processed.length > 0 && (
+                    <div className={styles.card} style={{ marginTop: '1.5rem' }}>
+                        <div className={styles.cardHeader}>
+                            <h3>Request History</h3>
+                        </div>
+                        <table className={styles.table} style={{ width: '100%' }}>
+                            <thead>
+                                <tr>
+                                    <th>Faculty</th>
+                                    <th>Subjects</th>
+                                    <th>Sections</th>
+                                    <th>Status</th>
+                                    <th>Responded On</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {processed.map(req => (
+                                    <tr key={req.id}>
+                                        <td style={{ fontWeight: 500 }}>{req.facultyName}</td>
+                                        <td style={{ fontSize: '0.9rem' }}>{req.subjects}</td>
+                                        <td>{req.sections || '-'}</td>
+                                        <td>
+                                            <span style={{
+                                                padding: '0.2rem 0.6rem', borderRadius: '8px',
+                                                fontSize: '0.8rem', fontWeight: 600,
+                                                color: statusColors[req.status], background: statusBg[req.status]
+                                            }}>{req.status}</span>
+                                        </td>
+                                        <td style={{ fontSize: '0.85rem', color: '#64748b' }}>
+                                            {req.responseDate ? new Date(req.responseDate).toLocaleDateString() : '-'}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </div>
+        );
+    };
 
 
     if (isSpectator) {

@@ -2086,9 +2086,9 @@ const FacultyDashboard = () => {
                                                             placeholder="M" title="CIE-1 Marks" />
                                                     </td>
                                                     <td>
-                                                        <input type="number" style={attInputStyle} value={valAtt1}
+                                                        <input type="text" inputMode="numeric" pattern="[0-9]*" style={attInputStyle} value={valAtt1}
                                                             onChange={(e) => handleAttendanceChange(student.id, 'att1', e.target.value)}
-                                                            placeholder="%" title="CIE-1 Attendance %" min="0" max="100" />
+                                                            placeholder="%" title="CIE-1 Attendance %" />
                                                     </td>
                                                     {/* CIE-2 */}
                                                     <td>
@@ -2097,9 +2097,9 @@ const FacultyDashboard = () => {
                                                             placeholder="M" title="CIE-2 Marks" />
                                                     </td>
                                                     <td>
-                                                        <input type="number" style={attInputStyle} value={valAtt2}
+                                                        <input type="text" inputMode="numeric" pattern="[0-9]*" style={attInputStyle} value={valAtt2}
                                                             onChange={(e) => handleAttendanceChange(student.id, 'att2', e.target.value)}
-                                                            placeholder="%" title="CIE-2 Attendance %" min="0" max="100" />
+                                                            placeholder="%" title="CIE-2 Attendance %" />
                                                     </td>
                                                     {/* CIE-3 */}
                                                     <td>
@@ -2108,9 +2108,9 @@ const FacultyDashboard = () => {
                                                             placeholder="M" title="CIE-3 Marks" />
                                                     </td>
                                                     <td>
-                                                        <input type="number" style={attInputStyle} value={valAtt3}
+                                                        <input type="text" inputMode="numeric" pattern="[0-9]*" style={attInputStyle} value={valAtt3}
                                                             onChange={(e) => handleAttendanceChange(student.id, 'att3', e.target.value)}
-                                                            placeholder="%" title="CIE-3 Attendance %" min="0" max="100" />
+                                                            placeholder="%" title="CIE-3 Attendance %" />
                                                     </td>
                                                     {/* CIE-4 */}
                                                     <td>
@@ -2119,9 +2119,9 @@ const FacultyDashboard = () => {
                                                             placeholder="M" title="CIE-4 Marks" />
                                                     </td>
                                                     <td>
-                                                        <input type="number" style={attInputStyle} value={valAtt4}
+                                                        <input type="text" inputMode="numeric" pattern="[0-9]*" style={attInputStyle} value={valAtt4}
                                                             onChange={(e) => handleAttendanceChange(student.id, 'att4', e.target.value)}
-                                                            placeholder="%" title="CIE-4 Attendance %" min="0" max="100" />
+                                                            placeholder="%" title="CIE-4 Attendance %" />
                                                     </td>
                                                     {/* CIE-5 */}
                                                     <td>
@@ -2130,9 +2130,9 @@ const FacultyDashboard = () => {
                                                             placeholder="M" title="CIE-5 Marks" />
                                                     </td>
                                                     <td>
-                                                        <input type="number" style={attInputStyle} value={valAtt5}
+                                                        <input type="text" inputMode="numeric" pattern="[0-9]*" style={attInputStyle} value={valAtt5}
                                                             onChange={(e) => handleAttendanceChange(student.id, 'att5', e.target.value)}
-                                                            placeholder="%" title="CIE-5 Attendance %" min="0" max="100" />
+                                                            placeholder="%" title="CIE-5 Attendance %" />
                                                     </td>
                                                     {/* Total */}
                                                     <td style={{ fontWeight: 'bold' }}>{calculateAverage(student)}</td>

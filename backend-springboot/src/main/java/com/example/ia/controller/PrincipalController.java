@@ -87,11 +87,32 @@ public class PrincipalController {
         // 2. Branches & Performance
         // Get all subjects
         List<Subject> allSubjects = subjectRepository.findAll();
-        // distinct departments
-        Set<String> departments = allSubjects.stream()
+        // distinct departments — combine from subjects, HODs, and students
+        Set<String> departments = new HashSet<>();
+
+        // From subjects
+        allSubjects.stream()
                 .map(Subject::getDepartment)
                 .filter(Objects::nonNull)
-                .collect(Collectors.toSet());
+                .filter(d -> !d.isBlank())
+                .forEach(departments::add);
+
+        // From HOD users (new departments may not have subjects yet)
+        userRepository.findByRole("HOD").stream()
+                .map(User::getDepartment)
+                .filter(Objects::nonNull)
+                .filter(d -> !d.isBlank())
+                .forEach(departments::add);
+
+        // From students
+        studentRepository.findAll().stream()
+                .map(Student::getDepartment)
+                .filter(Objects::nonNull)
+                .filter(d -> !d.isBlank())
+                .forEach(departments::add);
+
+        // Remove non-department values like "ADMIN"
+        departments.remove("ADMIN");
 
         if (departments.isEmpty()) {
             departments.addAll(Arrays.asList("CS", "EC", "ME", "CV"));
@@ -137,6 +158,13 @@ public class PrincipalController {
         response.put("branches", branchList);
         response.put("branchPerformance", branchPerformance);
         response.put("hodSubmissionStatus", hodSubmissionStatus);
+
+        // Per-department student counts
+        Map<String, Long> deptStudentCounts = new HashMap<>();
+        for (String dept : branchList) {
+            deptStudentCounts.put(dept, studentRepository.countByDepartment(dept));
+        }
+        response.put("deptStudentCounts", deptStudentCounts);
 
         // 3. Faculty Analytics (Aggregated)
         List<CieMark> allMarks = cieMarkRepository.findAll();

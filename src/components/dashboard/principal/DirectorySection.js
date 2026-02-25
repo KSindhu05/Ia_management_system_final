@@ -78,7 +78,7 @@ export const DirectorySection = memo(({ departments = [], selectedDept, deptStud
     const [searchQuery, setSearchQuery] = useState('');
     const [showAtRisk, setShowAtRisk] = useState(false);
     const [selectedStudents, setSelectedStudents] = useState([]);
-    const itemsPerPage = 100; // Show all students
+    const itemsPerPage = 10000; // Show all students
 
     const [internalSelectedStudent, setInternalSelectedStudent] = useState(null);
 
@@ -151,7 +151,7 @@ export const DirectorySection = memo(({ departments = [], selectedDept, deptStud
             const matchesSearch = (s.name || '').toLowerCase().includes(searchQuery.toLowerCase()) || (s.regNo || '').includes(searchQuery);
             // Optional: Filter by sem/sec if selected (omitted for strictly search-based for now or add back if needed)
             const matchesSem = semester === 'All' || s.semester == semester.replace(/\D/g, ''); // Extract number
-            // const matchesSec = section === 'All' || s.section === section;
+            const matchesSec = section === 'All' || s.section === section;
 
             // Risk calculation: student is at risk if total CIE marks < 40% (16/40)
             const totalMarks = (s.marks?.cie1 || 0) + (s.marks?.cie2 || 0);
@@ -160,7 +160,7 @@ export const DirectorySection = memo(({ departments = [], selectedDept, deptStud
             // If filter is active, only show at-risk students; otherwise show all
             const matchesRisk = showAtRisk ? isAtRisk : true;
 
-            return matchesSearch && matchesSem && matchesRisk;
+            return matchesSearch && matchesSem && matchesSec && matchesRisk;
         });
     }, [apiStudents, searchQuery, showAtRisk, semester, section]);
 
@@ -196,7 +196,7 @@ export const DirectorySection = memo(({ departments = [], selectedDept, deptStud
                             </div>
                             <div style={{ color: '#64748b', fontSize: '0.9rem' }}>
                                 <p>HOD: {dept.hod}</p>
-                                <p>Total Students: {120}</p>
+                                <p>Total Students: {dept.studentCount}</p>
                             </div>
                             <div style={{ marginTop: '1rem', display: 'flex', justifyContent: 'flex-end' }}>
                                 <span style={{ color: '#2563eb', fontWeight: '600', fontSize: '0.9rem' }}>View Students →</span>
@@ -307,6 +307,8 @@ export const DirectorySection = memo(({ departments = [], selectedDept, deptStud
                         >
                             <option value="A">Section A</option>
                             <option value="B">Section B</option>
+                            <option value="C">Section C</option>
+                            <option value="D">Section D</option>
                         </select>
                     </div>
 
@@ -316,7 +318,32 @@ export const DirectorySection = memo(({ departments = [], selectedDept, deptStud
                             background: 'white', color: '#0f172a',
                             display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', cursor: 'pointer', fontWeight: 600
                         }}
-                        onClick={() => alert(`Exporting ${filteredStudents.length} records to Excel...`)}
+                        onClick={() => {
+                            if (filteredStudents.length === 0) return;
+                            // Build CSV content
+                            const headers = ['Sl No', 'Reg No', 'Name', 'Semester', 'Section', 'Department', 'Email', 'Phone', 'Parent Phone'];
+                            const rows = filteredStudents.map((s, i) => [
+                                i + 1,
+                                s.regNo || '',
+                                (s.name || '').replace(/,/g, ' '),
+                                s.semester || '',
+                                s.section || '',
+                                s.department || selectedDept?.id || '',
+                                s.email || '',
+                                s.phone || '',
+                                s.parentPhone || ''
+                            ]);
+                            const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+                            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                            const url = URL.createObjectURL(blob);
+                            const link = document.createElement('a');
+                            link.href = url;
+                            link.download = `${selectedDept?.id || 'students'}_Sem${semester}_Sec${section}_students.csv`;
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                            URL.revokeObjectURL(url);
+                        }}
                     >
                         <Download size={16} /> Export
                     </button>

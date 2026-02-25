@@ -146,13 +146,29 @@ const PrincipalDashboard = () => {
 
     const departments = useMemo(() => {
         if (!dashboardData?.branches) return [];
-        return dashboardData.branches.map(branch => {
+
+        // Color palette for departments
+        const colorPalette = ['#3b82f6', '#f59e0b', '#8b5cf6', '#10b981', '#ef4444', '#06b6d4', '#ec4899', '#f97316'];
+
+        // Known department code -> full name mappings
+        const deptNames = {
+            'CS': 'Computer Science', 'CSE': 'Computer Science',
+            'EC': 'Electronics', 'ECE': 'Electronics & Communication',
+            'ME': 'Mechanical', 'MECH': 'Mechanical',
+            'CV': 'Civil', 'CIVIL': 'Civil',
+            'EE': 'Electrical', 'EEE': 'Electrical & Electronics',
+            'IS': 'Information Science', 'ISE': 'Information Science',
+            'AI': 'Artificial Intelligence', 'AIML': 'AI & Machine Learning',
+        };
+
+        return dashboardData.branches.map((branch, index) => {
             const hodInfo = dashboardData.hodSubmissionStatus?.find(h => h.dept === branch);
             return {
                 id: branch,
-                name: (branch === 'CS' || branch === 'CSE') ? 'Computer Science' : branch === 'ME' ? 'Mechanical' : (branch === 'EC' || branch === 'ECE') ? 'Electronics' : branch === 'CV' ? 'Civil' : branch,
-                hod: hodInfo ? hodInfo.hod : 'Unknown',
-                color: (branch === 'CS' || branch === 'CSE') ? '#3b82f6' : branch === 'ME' ? '#f59e0b' : (branch === 'EC' || branch === 'ECE') ? '#8b5cf6' : '#10b981'
+                name: deptNames[branch.toUpperCase()] || branch,
+                hod: hodInfo ? hodInfo.hod : 'Not Assigned',
+                color: colorPalette[index % colorPalette.length],
+                studentCount: dashboardData.deptStudentCounts?.[branch] || 0
             };
         });
     }, [dashboardData]);
@@ -230,6 +246,11 @@ const PrincipalDashboard = () => {
             const newHod = await createHod(token, hodData);
             setHodList(prev => [...prev, newHod]);
             showToast('HOD Registered Successfully', 'success');
+            // Re-fetch dashboard data so the new department appears immediately
+            try {
+                const dashData = await fetchPrincipalDashboard(token);
+                if (dashData) setDashboardData(dashData);
+            } catch (e) { /* silent — department will appear on next reload */ }
         } catch (error) {
             showToast('Failed to register HOD: ' + error.message, 'error');
         }

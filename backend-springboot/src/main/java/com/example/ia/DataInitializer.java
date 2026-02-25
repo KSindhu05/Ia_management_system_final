@@ -111,22 +111,29 @@ public class DataInitializer {
                 userRepository.delete(oldHod);
                 System.out.println("🗑️ Deleted old HOD user: HOD001");
             });
+            boolean hodIsNew = !userRepository.existsByUsername("Jaffar@CSE");
             User hodUser = userRepository.findByUsername("Jaffar@CSE").orElse(new User());
             hodUser.setUsername("Jaffar@CSE");
-            hodUser.setPassword(passwordEncoder.encode(defaultPassword));
+            if (hodIsNew) {
+                hodUser.setPassword(passwordEncoder.encode(defaultPassword));
+            }
             hodUser.setEmail("hod.cs@example.com");
             hodUser.setRole("HOD");
             hodUser.setFullName("MD Jaffar");
             hodUser.setDesignation("Head of Department");
             hodUser.setDepartment("CSE");
             userRepository.save(hodUser);
-            System.out.println("✅ HOD user updated: Jaffar@CSE (MD Jaffar)");
+            System.out.println("✅ HOD user " + (hodIsNew ? "created" : "updated (password preserved)")
+                    + ": Jaffar@CSE (MD Jaffar)");
 
             // 3. Faculty Seeding
             // FAC001 - Miss Manju Sree
+            boolean fac1IsNew = !userRepository.existsByUsername("FAC001");
             User fac1 = userRepository.findByUsername("FAC001").orElse(new User());
             fac1.setUsername("FAC001");
-            fac1.setPassword(passwordEncoder.encode(defaultPassword));
+            if (fac1IsNew) {
+                fac1.setPassword(passwordEncoder.encode(defaultPassword));
+            }
             fac1.setEmail("manjusree@example.com");
             fac1.setFullName("Miss Manju Sree");
             fac1.setDesignation("Assistant Professor");
@@ -134,12 +141,16 @@ public class DataInitializer {
             fac1.setRole("FACULTY");
             fac1.setSubjects("Engineering Maths-II");
             userRepository.save(fac1);
-            System.out.println("✅ Faculty FAC001 updated: Miss Manju Sree");
+            System.out.println("✅ Faculty FAC001 " + (fac1IsNew ? "created" : "updated (password preserved)")
+                    + ": Miss Manju Sree");
 
             // FAC002 - Ramesh Gouda
+            boolean fac2IsNew = !userRepository.existsByUsername("FAC002");
             User fac2 = userRepository.findByUsername("FAC002").orElse(new User());
             fac2.setUsername("FAC002");
-            fac2.setPassword(passwordEncoder.encode(defaultPassword));
+            if (fac2IsNew) {
+                fac2.setPassword(passwordEncoder.encode(defaultPassword));
+            }
             fac2.setEmail("rameshgouda@example.com");
             fac2.setFullName("Ramesh Gouda");
             fac2.setDesignation("Assistant Professor");
@@ -147,12 +158,16 @@ public class DataInitializer {
             fac2.setRole("FACULTY");
             fac2.setSubjects("CAEG");
             userRepository.save(fac2);
-            System.out.println("✅ Faculty FAC002 updated: Ramesh Gouda");
+            System.out.println(
+                    "✅ Faculty FAC002 " + (fac2IsNew ? "created" : "updated (password preserved)") + ": Ramesh Gouda");
 
             // FAC003 - Wahida Banu
+            boolean fac3IsNew = !userRepository.existsByUsername("FAC003");
             User fac3 = userRepository.findByUsername("FAC003").orElse(new User());
             fac3.setUsername("FAC003");
-            fac3.setPassword(passwordEncoder.encode(defaultPassword));
+            if (fac3IsNew) {
+                fac3.setPassword(passwordEncoder.encode(defaultPassword));
+            }
             fac3.setEmail("wahidabanu@example.com");
             fac3.setFullName("Wahida Banu");
             fac3.setDesignation("Assistant Professor");
@@ -160,12 +175,16 @@ public class DataInitializer {
             fac3.setRole("FACULTY");
             fac3.setSubjects("Python,Indian Constitution");
             userRepository.save(fac3);
-            System.out.println("✅ Faculty FAC003 updated: Wahida Banu");
+            System.out.println(
+                    "✅ Faculty FAC003 " + (fac3IsNew ? "created" : "updated (password preserved)") + ": Wahida Banu");
 
             // FAC004 - Nasrin Banu
+            boolean fac4IsNew = !userRepository.existsByUsername("FAC004");
             User fac4 = userRepository.findByUsername("FAC004").orElse(new User());
             fac4.setUsername("FAC004");
-            fac4.setPassword(passwordEncoder.encode(defaultPassword));
+            if (fac4IsNew) {
+                fac4.setPassword(passwordEncoder.encode(defaultPassword));
+            }
             fac4.setEmail("nasrinbanu@example.com");
             fac4.setFullName("Nasrin Banu");
             fac4.setDesignation("Assistant Professor");
@@ -173,7 +192,8 @@ public class DataInitializer {
             fac4.setRole("FACULTY");
             fac4.setSubjects("English Communication");
             userRepository.save(fac4);
-            System.out.println("✅ Faculty FAC004 updated: Nasrin Banu");
+            System.out.println(
+                    "✅ Faculty FAC004 " + (fac4IsNew ? "created" : "updated (password preserved)") + ": Nasrin Banu");
 
             // 4. Real Student Seeding (459CS25001 - A KAVITHA)
             if (!userRepository.existsByUsername("459CS25001")) {

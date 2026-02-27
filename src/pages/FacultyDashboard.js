@@ -21,6 +21,9 @@ const FacultyDashboard = () => {
     const { user } = useAuth();
     const [activeSection, setActiveSection] = useState('Overview');
     const [selectedSubject, setSelectedSubject] = useState(null);
+    const [selectedCieDept, setSelectedCieDept] = useState(null); // New state for Dept selection in CIE Entry
+    const [selectedOverviewDept, setSelectedOverviewDept] = useState(null); // New state for Dept selection in Overview
+    const [selectedCieType, setSelectedCieType] = useState('cie1'); // Which CIE is currently selected for attendance entry
     const [marks, setMarks] = useState({}); // Map { studentId: { co1: val... } }
     const [isLocked, setIsLocked] = useState(false); // For Commit/Edit workflow
     const [cieLockStatus, setCieLockStatus] = useState({ cie1: false, cie2: false, cie3: false, cie4: false, cie5: false }); // Per-CIE lock
@@ -601,7 +604,7 @@ const FacultyDashboard = () => {
             path: '/dashboard/faculty',
             icon: <LayoutDashboard size={20} />,
             isActive: activeSection === 'Overview',
-            onClick: () => { setActiveSection('Overview'); setSelectedSubject(null); }
+            onClick: () => { setActiveSection('Overview'); setSelectedSubject(null); setSelectedOverviewDept(null); }
         },
         {
             label: 'My Students',
@@ -615,7 +618,7 @@ const FacultyDashboard = () => {
             path: '/dashboard/faculty',
             icon: <FilePlus size={20} />,
             isActive: activeSection === 'CIE Entry',
-            onClick: () => { setActiveSection('CIE Entry'); setSelectedSubject(null); }
+            onClick: () => { setActiveSection('CIE Entry'); setSelectedSubject(null); setSelectedCieDept(null); }
         },
         {
             label: 'CIE Schedule',
@@ -680,7 +683,7 @@ const FacultyDashboard = () => {
 
                 // Initialize empty for all current students
                 students.forEach(s => {
-                    newMarks[s.id] = { cie1: '', cie2: '', cie3: '', cie4: '', cie5: '', attendance: '' };
+                    newMarks[s.id] = { cie1: '', cie2: '', cie3: '', cie4: '', cie5: '', cie1Att: '', cie2Att: '', cie3Att: '', cie4Att: '', cie5Att: '' };
                 });
 
                 // Track per-CIE statuses to determine lock state
@@ -700,7 +703,7 @@ const FacultyDashboard = () => {
                         // CRITICAL FIX: Ignore marks for students not in the current list (phantom marks)
                         if (!validStudentIds.has(sId)) return;
 
-                        if (!newMarks[sId]) newMarks[sId] = { cie1: '', cie2: '', cie3: '', cie4: '', cie5: '', attendance: '' };
+                        if (!newMarks[sId]) newMarks[sId] = { cie1: '', cie2: '', cie3: '', cie4: '', cie5: '', cie1Att: '', cie2Att: '', cie3Att: '', cie4Att: '', cie5Att: '' };
 
                         // Normalize key: CIE-1 -> cie1, CIE1 -> cie1
                         const rawType = m.cieType || m.iaType;
@@ -714,9 +717,9 @@ const FacultyDashboard = () => {
                             const markVal = (isNotEntered && isPending) ? '' : (m.marks !== null && m.marks !== undefined ? m.marks : '');
                             newMarks[sId][key] = markVal;
 
-                            // Capture attendance from CIE1 record
-                            if (key === 'cie1' && m.attendancePercentage != null) {
-                                newMarks[sId].attendance = m.attendancePercentage;
+                            // Capture attendance per CIE record
+                            if (m.attendancePercentage != null) {
+                                newMarks[sId][key + 'Att'] = m.attendancePercentage;
                             }
                         }
                         // Track status per CIE type
@@ -746,8 +749,8 @@ const FacultyDashboard = () => {
         let numValue = parseInt(value, 10);
         if (value === '' || value === 'Ab') numValue = value; // Allow empty or Ab
 
-        // All CIEs have max 50 marks
-        let max = 50;
+        // Attendance fields allow up to 100, CIE marks max 50
+        let max = field.endsWith('Att') ? 100 : 50;
 
         if (typeof numValue === 'number' && numValue < 0) numValue = 0;
         if (typeof numValue === 'number' && numValue > max) numValue = max;
@@ -834,8 +837,9 @@ const FacultyDashboard = () => {
 
                 const val = sMarks[key];
 
-                // Include attendance percentage only for CIE1 records
-                const attVal = key === 'cie1' ? (sMarks.attendance !== '' && sMarks.attendance !== undefined ? parseFloat(sMarks.attendance) : null) : null;
+                // Include attendance percentage for this specific CIE
+                const attField = key + 'Att';
+                const attVal = sMarks[attField] !== '' && sMarks[attField] !== undefined ? parseFloat(sMarks[attField]) : null;
 
                 // If the field was cleared (empty string), send null to clear it in backend
                 if (val === '' || val === null || val === undefined) {
@@ -903,19 +907,10 @@ const FacultyDashboard = () => {
     };
 
     const handleSubmitForApproval = async () => {
-        // Prompt for CIE Type
-        const rawCieType = window.prompt("Enter Assessment Type to Submit (e.g., CIE1, CIE2, CIE3):", "CIE1");
-        if (!rawCieType) return;
+        // Use the currently selected CIE type
+        const cieType = selectedCieType.toUpperCase();
 
-        // Normalize Input: remove spaces, hyphens and uppercase
-        const cieType = rawCieType.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
-
-        // Validate
-        const validTypes = ['CIE1', 'CIE2', 'CIE3', 'CIE4', 'CIE5'];
-        if (!validTypes.includes(cieType)) {
-            showToast('Invalid CIE Type. Please enter CIE1, CIE2, CIE3, CIE4, or CIE5', 'error');
-            return;
-        }
+        if (!window.confirm(`Submit ${cieType} marks + attendance to HOD for approval?`)) return;
 
         setSaving(true);
 
@@ -1299,30 +1294,96 @@ const FacultyDashboard = () => {
 
             < div className={styles.mainContentGrid} >
                 <div className={styles.leftColumn}>
-                    <section>
-                        <h2 className={styles.sectionTitle}>My Subjects</h2>
-                        <div className={styles.cardsGrid}>
-                            {mySubjects.length > 0 ? mySubjects.map(sub => (
-                                <div key={sub.id} className={styles.subjectCard} onClick={() => handleSubjectClick(sub)}>
-                                    <div className={styles.cardHeader}>
-                                        <h3 className={styles.subjectName}>{sub.name}</h3>
-                                        <span className={styles.termBadge}>{sub.semester} Sem</span>
+                    {/* Level 1: Select Department for Overview */}
+                    {!selectedOverviewDept ? (
+                        <section>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                                <h2 className={styles.sectionTitle} style={{ margin: 0 }}>Select Department</h2>
+                            </div>
+                            {(() => {
+                                const overviewDepartments = [...new Set(mySubjects.map(sub => sub.department).filter(Boolean))].sort();
+                                if (overviewDepartments.length === 0) {
+                                    return <p>No departments found.</p>;
+                                }
+                                return (
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1.5rem' }}>
+                                        {overviewDepartments.map(dept => (
+                                            <div
+                                                key={dept}
+                                                onClick={() => setSelectedOverviewDept(dept)}
+                                                style={{
+                                                    background: 'white',
+                                                    borderRadius: '16px',
+                                                    padding: '2rem 1.5rem',
+                                                    textAlign: 'center',
+                                                    cursor: 'pointer',
+                                                    boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)',
+                                                    transition: 'transform 0.2s ease',
+                                                    border: '1px solid #f1f5f9'
+                                                }}
+                                                onMouseOver={(e) => { e.currentTarget.style.transform = 'translateY(-5px)'; }}
+                                                onMouseOut={(e) => { e.currentTarget.style.transform = 'translateY(0)'; }}
+                                            >
+                                                <div style={{
+                                                    width: '64px',
+                                                    height: '64px',
+                                                    borderRadius: '50%',
+                                                    background: '#e0f2fe',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    margin: '0 auto 1.5rem auto'
+                                                }}>
+                                                    <Building2 size={32} color="#0284c7" />
+                                                </div>
+                                                <h3 style={{ margin: '0 0 0.5rem 0', color: '#0f172a', fontSize: '1.25rem' }}>{dept}</h3>
+                                                <p style={{ margin: 0, color: '#64748b', fontSize: '0.9rem' }}>View Subjects</p>
+                                            </div>
+                                        ))}
                                     </div>
-                                    <div className={styles.subjectFooter}>
-                                        <div className={styles.cardStats}>
-                                            <Users size={16} color="#6b7280" />
-                                            <span>{sub.studentCount} Students</span>
-                                        </div>
-                                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                                            {/* Simulate attention needed if less than 90% complete */}
-                                            <span className={styles.progressBadge} style={{ backgroundColor: '#fef3c7', color: '#d97706' }}>Needs Attention</span>
-                                            <span className={styles.progressBadge}>85% Comp</span>
-                                        </div>
-                                    </div>
+                                );
+                            })()}
+                        </section>
+                    ) : (
+                        <section>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                    <button
+                                        onClick={() => setSelectedOverviewDept(null)}
+                                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#0369a1', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem', fontWeight: '500' }}
+                                    >
+                                        ← Back
+                                    </button>
+                                    <h2 className={styles.sectionTitle} style={{ margin: 0 }}>Subjects - {selectedOverviewDept}</h2>
                                 </div>
-                            )) : <p>No subjects assigned.</p>}
-                        </div>
-                    </section>
+                            </div>
+
+                            <div className={styles.cardsGrid}>
+                                {mySubjects.length > 0 ? mySubjects
+                                    .filter(sub => sub.department === selectedOverviewDept)
+                                    .map(sub => (
+                                        <div key={sub.id} className={styles.subjectCard} onClick={() => handleSubjectClick(sub)}>
+                                            <div className={styles.cardHeader}>
+                                                <h3 className={styles.subjectName}>{sub.name}</h3>
+                                                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                                                    <span className={styles.termBadge}>{sub.semester} Sem</span>
+                                                </div>
+                                            </div>
+                                            <div className={styles.subjectFooter}>
+                                                <div className={styles.cardStats}>
+                                                    <Users size={16} color="#6b7280" />
+                                                    <span>{sub.studentCount} Students</span>
+                                                </div>
+                                                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                                    <span className={styles.progressBadge} style={{ backgroundColor: '#fef3c7', color: '#d97706' }}>Needs Attention</span>
+                                                    <span className={styles.progressBadge}>85% Comp</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )) : <p>No subjects assigned.</p>}
+                            </div>
+                        </section>
+                    )}
 
 
 
@@ -1642,80 +1703,66 @@ const FacultyDashboard = () => {
     };
 
     const renderCIEEntry = () => {
-        if (!selectedSubject) {
+        // Level 1: Select Department
+        if (!selectedSubject && !selectedCieDept) {
+            const cieDepartments = [...new Set(mySubjects.map(sub => sub.department).filter(Boolean))].sort();
+
+            if (cieDepartments.length === 0) {
+                return (
+                    <div className={styles.emptyState}>
+                        <Building2 size={48} style={{ color: '#cbd5e1', marginBottom: '1rem' }} />
+                        <p>You have no subjects assigned.</p>
+                    </div>
+                );
+            }
+
             return (
-                <div className={styles.emptyState}>
+                <div className={styles.sectionContainer}>
+                    <div className={styles.engagingHeader}>
+                        <div className={styles.headerContent}>
+                            <h1 className={styles.subjectTitle}>CIE Entry - Select Department</h1>
+                            <p className={styles.subjectMeta} style={{ color: '#dbeafe' }}>Choose a department to view subjects and enter marks</p>
+                        </div>
+                    </div>
 
-
-                    <div className={styles.cardsGrid}>
-                        {mySubjects.map(sub => (
-                            <div key={sub.id} className={styles.subjectCard} onClick={() => handleSubjectClick(sub)}>
-                                <div className={styles.cardHeader}>
-                                    <h3 className={styles.subjectName}>{sub.name}</h3>
-                                    <span className={styles.termBadge} style={{ backgroundColor: '#e0f2fe', color: '#0369a1' }}>{sub.semester} Sem</span>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1.5rem', marginTop: '1.5rem' }}>
+                        {cieDepartments.map(dept => (
+                            <div
+                                key={dept}
+                                onClick={() => setSelectedCieDept(dept)}
+                                style={{
+                                    background: 'white',
+                                    borderRadius: '16px',
+                                    padding: '2rem 1.5rem',
+                                    textAlign: 'center',
+                                    cursor: 'pointer',
+                                    boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03)',
+                                    transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                                    border: '1px solid #f1f5f9'
+                                }}
+                                onMouseOver={(e) => {
+                                    e.currentTarget.style.transform = 'translateY(-5px)';
+                                    e.currentTarget.style.boxShadow = '0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)';
+                                }}
+                                onMouseOut={(e) => {
+                                    e.currentTarget.style.transform = 'translateY(0)';
+                                    e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03)';
+                                }}
+                            >
+                                <div style={{
+                                    width: '80px',
+                                    height: '80px',
+                                    borderRadius: '50%',
+                                    background: '#e0f2fe',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    margin: '0 auto 1.5rem auto'
+                                }}>
+                                    <Building2 size={40} color="#0284c7" />
                                 </div>
-
-                                <div style={{ marginBottom: '1rem' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                                        <span style={{ fontSize: '0.85rem', color: '#6b7280' }}>Code: {sub.code}</span>
-                                        <span style={{ fontSize: '0.85rem', color: '#6b7280', fontWeight: '500' }}>
-                                            <Users size={14} style={{ display: 'inline', marginRight: '4px' }} />
-                                            {/* Dynamic Student Count */}
-                                            {students.filter(s => s.department === sub.department && String(s.semester) === String(sub.semester)).length} Students
-                                        </span>
-                                    </div>
-
-                                    {/* Dynamic Progress Calculation */}
-                                    {(() => {
-                                        // Filter students for this specific subject AND faculty's sections
-                                        const subjectStudents = students.filter(s =>
-                                            s.department === sub.department &&
-                                            String(s.semester) === String(sub.semester) &&
-                                            (facultySections.length === 0 || facultySections.includes(s.section))
-                                        );
-                                        const totalStd = subjectStudents.length;
-
-                                        // Count how many have at least one mark entry for this subject
-                                        let evaluatedCount = 0;
-                                        if (totalStd > 0 && allStudentMarks && allStudentMarks[sub.id]) {
-                                            evaluatedCount = subjectStudents.filter(std => {
-                                                const m = allStudentMarks[sub.id][std.id];
-                                                // Check if student has ANY valid mark (CIE1-5)
-                                                return m && ['cie1', 'cie2', 'cie3', 'cie4', 'cie5'].some(k => m[k] !== undefined && m[k] !== null && m[k] !== '');
-                                            }).length;
-                                        }
-
-                                        const completion = totalStd > 0 ? Math.round((evaluatedCount / totalStd) * 100) : 0;
-
-                                        return (
-                                            <>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', color: '#4b5563', marginBottom: '4px' }}>
-                                                    <span style={{ flex: 1 }}>Completion</span>
-                                                    <span style={{ fontWeight: '600' }}>{completion}%</span>
-                                                </div>
-                                                <div style={{ width: '100%', height: '6px', background: '#f3f4f6', borderRadius: '4px', overflow: 'hidden' }}>
-                                                    <div style={{ width: `${completion}%`, height: '100%', background: completion === 100 ? '#10b981' : '#3b82f6', borderRadius: '4px' }}></div>
-                                                </div>
-                                            </>
-                                        );
-                                    })()}
-                                </div>
-
-                                <div className={styles.subjectFooter} style={{ borderTop: '1px solid #f3f4f6', paddingTop: '0.75rem', marginTop: '0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>Last updated: 2 days ago</span>
-                                    <button style={{
-                                        padding: '0.3rem 0.8rem',
-                                        borderRadius: '6px',
-                                        background: '#eff6ff',
-                                        color: '#2563eb',
-                                        border: 'none',
-                                        fontSize: '0.8rem',
-                                        fontWeight: '600',
-                                        cursor: 'pointer'
-                                    }}>
-                                        Enter Marks →
-                                    </button>
-                                </div>
+                                <h3 style={{ margin: '0 0 0.5rem 0', color: '#0f172a', fontSize: '1.25rem' }}>{dept}</h3>
+                                <p style={{ margin: 0, color: '#64748b', fontSize: '0.9rem' }}>View Subjects</p>
                             </div>
                         ))}
                     </div>
@@ -1723,6 +1770,136 @@ const FacultyDashboard = () => {
             );
         }
 
+        // Level 2: Select Subject for a previously selected Department
+        if (!selectedSubject && selectedCieDept) {
+            const filteredSubjects = mySubjects.filter(sub => sub.department === selectedCieDept);
+
+            return (
+                <div className={styles.sectionContainer}>
+                    <div
+                        className={styles.backLink}
+                        onClick={() => setSelectedCieDept(null)}
+                        style={{
+                            marginBottom: '1rem',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            background: '#e0f2fe',
+                            color: '#0369a1',
+                            padding: '0.5rem 1rem',
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                            fontWeight: '600',
+                            fontSize: '0.9rem',
+                            transition: 'all 0.2s ease',
+                            boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                        }}
+                        onMouseOver={(e) => { e.currentTarget.style.background = '#bae6fd'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                        onMouseOut={(e) => { e.currentTarget.style.background = '#e0f2fe'; e.currentTarget.style.transform = 'translateY(0)'; }}
+                    >
+                        <span style={{ marginRight: '0.5rem' }}>←</span> Back to Departments
+                    </div>
+
+                    <div className={styles.engagingHeader} style={{ marginBottom: '2rem' }}>
+                        <div className={styles.headerContent}>
+                            <h1 className={styles.subjectTitle}>{selectedCieDept} - Subjects</h1>
+                            <p className={styles.subjectMeta} style={{ color: '#dbeafe' }}>Select a subject to enter marks</p>
+                        </div>
+                    </div>
+
+                    {filteredSubjects.length === 0 ? (
+                        <div className={styles.emptyState}>
+                            <Building2 size={48} style={{ color: '#cbd5e1', marginBottom: '1rem' }} />
+                            <p>You have no subjects assigned.</p>
+                        </div>
+                    ) : (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
+                            {filteredSubjects.map(sub => (
+                                <div key={sub.id} className={styles.subjectCard} onClick={() => handleSubjectClick(sub)} style={{ padding: '1.5rem', transition: 'all 0.2s ease', cursor: 'pointer', background: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}
+                                    onMouseOver={(e) => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 10px 15px -3px rgba(0,0,0,0.1)'; }}
+                                    onMouseOut={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0,0,0,0.05)'; }}>
+
+                                    <div className={styles.cardHeader} style={{ marginBottom: '1.5rem', alignItems: 'flex-start' }}>
+                                        <h3 className={styles.subjectName} style={{ fontSize: '1.25rem', lineHeight: '1.4' }}>{sub.name}</h3>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-end' }}>
+                                            <span className={styles.termBadge} style={{ backgroundColor: '#e0f2fe', color: '#0369a1', padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}>{sub.semester} Sem</span>
+                                            {sub.department && (
+                                                <span className={styles.termBadge} style={{ backgroundColor: '#f1f5f9', color: '#475569', fontSize: '0.8rem' }}>{sub.department}</span>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div style={{ marginBottom: '1.5rem' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                                            <span style={{ fontSize: '0.9rem', color: '#64748b' }}>Code: <strong style={{ color: '#334155' }}>{sub.code}</strong></span>
+                                            <span style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: '500' }}>
+                                                <Users size={16} style={{ display: 'inline', marginRight: '6px', verticalAlign: 'middle' }} />
+                                                {/* Dynamic Student Count */}
+                                                {students.filter(s => s.department === sub.department && String(s.semester) === String(sub.semester)).length} Students
+                                            </span>
+                                        </div>
+
+                                        {/* Dynamic Progress Calculation */}
+                                        {(() => {
+                                            // Filter students for this specific subject AND faculty's sections
+                                            const subjectStudents = students.filter(s =>
+                                                s.department === sub.department &&
+                                                String(s.semester) === String(sub.semester) &&
+                                                (facultySections.length === 0 || facultySections.includes(s.section))
+                                            );
+                                            const totalStd = subjectStudents.length;
+
+                                            // Count how many have at least one mark entry for this subject
+                                            let evaluatedCount = 0;
+                                            if (totalStd > 0 && allStudentMarks && allStudentMarks[sub.id]) {
+                                                evaluatedCount = subjectStudents.filter(std => {
+                                                    const m = allStudentMarks[sub.id][std.id];
+                                                    // Check if student has ANY valid mark (CIE1-5)
+                                                    return m && ['cie1', 'cie2', 'cie3', 'cie4', 'cie5'].some(k => m[k] !== undefined && m[k] !== null && m[k] !== '');
+                                                }).length;
+                                            }
+
+                                            const completion = totalStd > 0 ? Math.round((evaluatedCount / totalStd) * 100) : 0;
+
+                                            return (
+                                                <>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', color: '#4b5563', marginBottom: '6px' }}>
+                                                        <span style={{ flex: 1 }}>Completion</span>
+                                                        <span style={{ fontWeight: '600', color: completion === 100 ? '#059669' : '#2563eb' }}>{completion}%</span>
+                                                    </div>
+                                                    <div style={{ width: '100%', height: '8px', background: '#f1f5f9', borderRadius: '4px', overflow: 'hidden' }}>
+                                                        <div style={{ width: `${completion}%`, height: '100%', background: completion === 100 ? '#10b981' : '#3b82f6', borderRadius: '4px', transition: 'width 0.5s ease' }}></div>
+                                                    </div>
+                                                </>
+                                            );
+                                        })()}
+                                    </div>
+
+                                    <div className={styles.subjectFooter} style={{ borderTop: '1px solid #f1f5f9', paddingTop: '1rem', marginTop: 'auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Last updated: 2 days ago</span>
+                                        <button style={{
+                                            padding: '0.5rem 1rem',
+                                            borderRadius: '8px',
+                                            background: '#eff6ff',
+                                            color: '#2563eb',
+                                            border: 'none',
+                                            fontSize: '0.9rem',
+                                            fontWeight: '600',
+                                            cursor: 'pointer',
+                                            transition: 'background 0.2s ease'
+                                        }} onMouseOver={(e) => e.currentTarget.style.background = '#dbeafe'} onMouseOut={(e) => e.currentTarget.style.background = '#eff6ff'}>
+                                            Enter Marks →
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        // Level 3: Marks Entry Table
         return (
             <div className={styles.sectionContainer}>
 
@@ -1747,7 +1924,7 @@ const FacultyDashboard = () => {
                     onMouseOver={(e) => { e.currentTarget.style.background = '#bae6fd'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
                     onMouseOut={(e) => { e.currentTarget.style.background = '#e0f2fe'; e.currentTarget.style.transform = 'translateY(0)'; }}
                 >
-                    <span style={{ marginRight: '0.5rem' }}>←</span> Back to Overview
+                    <span style={{ marginRight: '0.5rem' }}>←</span> Back to Subjects
                 </div>
 
                 {/* NEW ATTRACTIVE HEADER */}
@@ -1827,22 +2004,29 @@ const FacultyDashboard = () => {
                     </div>
                 </div>
 
+
+
+
                 <div className={styles.card}>
                     <div className={styles.tableContainer}>
-                        <table className={styles.table}>
+                        <table className={styles.table} style={{ tableLayout: 'fixed' }}>
                             <thead>
                                 <tr>
                                     <th>Sl No</th>
                                     <th>Reg No</th>
                                     <th>Student Name</th>
-                                    <th>CIE-1 (50)</th>
-                                    <th>Att (%)</th>
-                                    <th>CIE-2 (50)</th>
-                                    <th>CIE-3 (50)</th>
-                                    <th>CIE-4 (50)</th>
-                                    <th>CIE-5 (50)</th>
-
+                                    <th style={selectedCieType === 'cie1' ? { background: '#eff6ff', color: '#1d4ed8' } : {}}>CIE-1 (50)</th>
+                                    {selectedCieType === 'cie1' && <th style={{ background: '#f0fdf4', color: '#15803d' }}>Att (%)</th>}
+                                    <th style={selectedCieType === 'cie2' ? { background: '#eff6ff', color: '#1d4ed8' } : {}}>CIE-2 (50)</th>
+                                    {selectedCieType === 'cie2' && <th style={{ background: '#f0fdf4', color: '#15803d' }}>Att (%)</th>}
+                                    <th style={selectedCieType === 'cie3' ? { background: '#eff6ff', color: '#1d4ed8' } : {}}>CIE-3 (50)</th>
+                                    {selectedCieType === 'cie3' && <th style={{ background: '#f0fdf4', color: '#15803d' }}>Att (%)</th>}
+                                    <th style={selectedCieType === 'cie4' ? { background: '#eff6ff', color: '#1d4ed8' } : {}}>CIE-4 (50)</th>
+                                    {selectedCieType === 'cie4' && <th style={{ background: '#f0fdf4', color: '#15803d' }}>Att (%)</th>}
+                                    <th style={selectedCieType === 'cie5' ? { background: '#eff6ff', color: '#1d4ed8' } : {}}>CIE-5 (50)</th>
+                                    {selectedCieType === 'cie5' && <th style={{ background: '#f0fdf4', color: '#15803d' }}>Att (%)</th>}
                                     <th>Total (250)</th>
+                                    <th style={{ background: '#fefce8', color: '#a16207', width: '150px', minWidth: '150px' }}>Remarks</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -1856,81 +2040,126 @@ const FacultyDashboard = () => {
                                     })
                                     .map((student, index) => {
                                         const sMarks = marks[student.id] || {};
-                                        // Mapping logic: local edits override API data
                                         const ia1Mark = sMarks['CIE1'] || {};
 
-                                        // Check if we have a direct edit (top-level key) or fallback to API object
                                         const valCIE1 = sMarks.cie1 !== undefined ? sMarks.cie1 : (ia1Mark.cie1Score != null ? ia1Mark.cie1Score : '');
                                         const valCIE2 = sMarks.cie2 !== undefined ? sMarks.cie2 : (ia1Mark.cie2Score != null ? ia1Mark.cie2Score : '');
                                         const valCIE3 = sMarks.cie3 !== undefined ? sMarks.cie3 : '';
                                         const valCIE4 = sMarks.cie4 !== undefined ? sMarks.cie4 : '';
                                         const valCIE5 = sMarks.cie5 !== undefined ? sMarks.cie5 : '';
 
-
+                                        const renderAttendanceCell = (cieKey) => {
+                                            if (selectedCieType !== cieKey) return null;
+                                            const attField = cieKey + 'Att';
+                                            return (
+                                                <td style={{ background: '#f0fdf4' }}>
+                                                    <input
+                                                        type="number"
+                                                        className={styles.markInput}
+                                                        value={sMarks[attField] !== undefined ? sMarks[attField] : ''}
+                                                        onChange={(e) => handleMarkChange(student.id, attField, e.target.value)}
+                                                        placeholder=""
+                                                        min="0"
+                                                        max="100"
+                                                        style={{ background: '#f0fdf4', border: '1px solid #86efac' }}
+                                                    />
+                                                </td>
+                                            );
+                                        };
 
                                         return (
                                             <tr key={student.id}>
                                                 <td>{index + 1}</td>
                                                 <td>{student.rollNo || student.regNo}</td>
                                                 <td>{student.name}</td>
-                                                <td>
+                                                <td style={selectedCieType === 'cie1' ? { background: '#eff6ff' } : {}}>
                                                     <input
                                                         type="number"
                                                         className={styles.markInput}
                                                         value={valCIE1}
                                                         onChange={(e) => handleMarkChange(student.id, 'cie1', e.target.value)}
+                                                        onFocus={() => setSelectedCieType('cie1')}
                                                         placeholder=""
                                                     />
                                                 </td>
-                                                <td>
-                                                    <input
-                                                        type="number"
-                                                        className={styles.markInput}
-                                                        value={sMarks.attendance !== undefined ? sMarks.attendance : ''}
-                                                        onChange={(e) => handleMarkChange(student.id, 'attendance', e.target.value)}
-                                                        placeholder=""
-                                                        min="0"
-                                                        max="100"
-                                                    />
-                                                </td>
-                                                <td>
+                                                {renderAttendanceCell('cie1')}
+                                                <td style={selectedCieType === 'cie2' ? { background: '#eff6ff' } : {}}>
                                                     <input
                                                         type="number"
                                                         className={styles.markInput}
                                                         value={valCIE2}
                                                         onChange={(e) => handleMarkChange(student.id, 'cie2', e.target.value)}
+                                                        onFocus={() => setSelectedCieType('cie2')}
                                                         placeholder=""
                                                     />
                                                 </td>
-                                                <td>
+                                                {renderAttendanceCell('cie2')}
+                                                <td style={selectedCieType === 'cie3' ? { background: '#eff6ff' } : {}}>
                                                     <input
                                                         type="number"
                                                         className={styles.markInput}
                                                         value={valCIE3}
                                                         onChange={(e) => handleMarkChange(student.id, 'cie3', e.target.value)}
+                                                        onFocus={() => setSelectedCieType('cie3')}
                                                         placeholder=""
                                                     />
                                                 </td>
-                                                <td>
+                                                {renderAttendanceCell('cie3')}
+                                                <td style={selectedCieType === 'cie4' ? { background: '#eff6ff' } : {}}>
                                                     <input
                                                         type="number"
                                                         className={styles.markInput}
                                                         value={valCIE4}
                                                         onChange={(e) => handleMarkChange(student.id, 'cie4', e.target.value)}
+                                                        onFocus={() => setSelectedCieType('cie4')}
                                                         placeholder=""
                                                     />
                                                 </td>
-                                                <td>
+                                                {renderAttendanceCell('cie4')}
+                                                <td style={selectedCieType === 'cie5' ? { background: '#eff6ff' } : {}}>
                                                     <input
                                                         type="number"
                                                         className={styles.markInput}
                                                         value={valCIE5}
                                                         onChange={(e) => handleMarkChange(student.id, 'cie5', e.target.value)}
+                                                        onFocus={() => setSelectedCieType('cie5')}
                                                         placeholder=""
                                                     />
                                                 </td>
-                                                {/* Final Total */}
+                                                {renderAttendanceCell('cie5')}
                                                 <td style={{ fontWeight: 'bold' }}>{calculateAverage(student)}</td>
+                                                {(() => {
+                                                    const getCieRemark = (key, label) => {
+                                                        const v = sMarks[key] !== undefined && sMarks[key] !== '' ? parseFloat(sMarks[key]) : null;
+                                                        const a = sMarks[key + 'Att'] !== undefined && sMarks[key + 'Att'] !== '' ? parseFloat(sMarks[key + 'Att']) : null;
+                                                        if (v == null || isNaN(v) || a == null || isNaN(a)) return null;
+                                                        if (v < 25 && a < 75) return { text: `${label}: Low Marks, Low Att`, severity: 3 };
+                                                        if (v < 25) return { text: `${label}: Low Marks`, severity: 2 };
+                                                        if (a < 75) return { text: `${label}: Low Att`, severity: 2 };
+                                                        if (v >= 40 && a >= 75) return { text: `${label}: Excellent`, severity: 0 };
+                                                        return { text: `${label}: Good`, severity: 0 };
+                                                    };
+                                                    const allCies = [
+                                                        getCieRemark('cie1', 'CIE-1'), getCieRemark('cie2', 'CIE-2'),
+                                                        getCieRemark('cie3', 'CIE-3'), getCieRemark('cie4', 'CIE-4'),
+                                                        getCieRemark('cie5', 'CIE-5')
+                                                    ];
+                                                    const filled = allCies.filter(r => r !== null);
+                                                    // If all 5 are filled, show combined
+                                                    if (filled.length === 5) {
+                                                        const worst = Math.max(...filled.map(r => r.severity));
+                                                        const color = worst >= 3 ? '#dc2626' : worst >= 2 ? '#ea580c' : '#15803d';
+                                                        const bg = worst >= 3 ? '#fef2f2' : worst >= 2 ? '#fff7ed' : '#f0fdf4';
+                                                        const text = filled.map(r => r.text).join(' | ');
+                                                        return <td style={{ fontSize: '0.65rem', fontWeight: 600, color, background: bg, width: '150px', minWidth: '150px', whiteSpace: 'normal', lineHeight: 1.3 }}>{text}</td>;
+                                                    }
+                                                    // Otherwise show focused CIE's remark
+                                                    const focused = getCieRemark(selectedCieType, selectedCieType.replace('cie', 'CIE-'));
+                                                    if (!focused) return <td style={{ color: '#94a3b8', fontSize: '0.8rem', width: '150px', minWidth: '150px' }}>-</td>;
+                                                    const color = focused.severity >= 3 ? '#dc2626' : focused.severity >= 2 ? '#ea580c' : focused.severity === 0 ? '#15803d' : '#2563eb';
+                                                    const bg = focused.severity >= 3 ? '#fef2f2' : focused.severity >= 2 ? '#fff7ed' : '#f0fdf4';
+                                                    return <td style={{ fontSize: '0.72rem', fontWeight: 600, color, background: bg, width: '150px', minWidth: '150px', whiteSpace: 'normal', lineHeight: 1.3 }}>{focused.text}</td>;
+                                                })()}
                                             </tr>
                                         )
                                     })}

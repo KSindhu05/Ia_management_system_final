@@ -107,7 +107,7 @@ const StudentDashboard = () => {
                         if (!mark.subject) return;
                         const subId = mark.subject.id;
                         if (!groupedMarks[subId]) {
-                            groupedMarks[subId] = { subject: mark.subject, cie1Score: null, cie2Score: null, cie3Score: null, cie4Score: null, cie5Score: null, attendancePercentage: null, totalScore: 0, count: 0 };
+                            groupedMarks[subId] = { subject: mark.subject, cie1Score: null, cie2Score: null, cie3Score: null, cie4Score: null, cie5Score: null, cie1Att: null, cie2Att: null, cie3Att: null, cie4Att: null, cie5Att: null, attendancePercentage: null, totalScore: 0, count: 0 };
                         }
                         if (mark.cieType === 'CIE1') groupedMarks[subId].cie1Score = mark.totalScore;
                         else if (mark.cieType === 'CIE2') groupedMarks[subId].cie2Score = mark.totalScore;
@@ -115,10 +115,15 @@ const StudentDashboard = () => {
                         else if (mark.cieType === 'CIE4') groupedMarks[subId].cie4Score = mark.totalScore;
                         else if (mark.cieType === 'CIE5') groupedMarks[subId].cie5Score = mark.totalScore;
 
-                        // Capture attendance from CIE1 record
+                        // Capture attendance from each CIE record
                         if (mark.cieType === 'CIE1' && mark.attendancePercentage != null) {
-                            groupedMarks[subId].attendancePercentage = mark.attendancePercentage;
+                            groupedMarks[subId].cie1Att = mark.attendancePercentage;
+                            groupedMarks[subId].attendancePercentage = mark.attendancePercentage; // backward compat
                         }
+                        if (mark.cieType === 'CIE2' && mark.attendancePercentage != null) groupedMarks[subId].cie2Att = mark.attendancePercentage;
+                        if (mark.cieType === 'CIE3' && mark.attendancePercentage != null) groupedMarks[subId].cie3Att = mark.attendancePercentage;
+                        if (mark.cieType === 'CIE4' && mark.attendancePercentage != null) groupedMarks[subId].cie4Att = mark.attendancePercentage;
+                        if (mark.cieType === 'CIE5' && mark.attendancePercentage != null) groupedMarks[subId].cie5Att = mark.attendancePercentage;
 
 
                         groupedMarks[subId].count++;
@@ -244,7 +249,7 @@ const StudentDashboard = () => {
                     </div>
                     <div className={styles.tableContainer}>
                         <table className={styles.table}>
-                            <thead><tr><th>Subject</th><th>CIE-1</th><th>Att %</th><th>Total Progress</th><th>Grade</th></tr></thead>
+                            <thead><tr><th>Subject</th><th>CIE-1</th><th>Att %</th><th>Total Progress</th><th style={{ background: '#fefce8', color: '#a16207' }}>Remarks</th></tr></thead>
                             <tbody>
                                 {realSubjects.length > 0 ? realSubjects.map((sub, idx) => {
                                     const mark = realMarks.find(m => m.subject.id === sub.id) || {};
@@ -267,7 +272,18 @@ const StudentDashboard = () => {
                                                     <div className={styles.progressBar} style={{ width: `${progressWidth}%`, background: status.color }}></div>
                                                 </div>
                                             </td>
-                                            <td><span className={styles.badge} style={{ color: status.color, background: status.bg }}>{status.label}</span></td>
+                                            <td>{(() => {
+                                                const score = mark.cie1Score != null ? parseFloat(mark.cie1Score) : null;
+                                                const att = mark.attendancePercentage != null ? parseFloat(mark.attendancePercentage) : null;
+                                                if (score == null) return <span style={{ color: '#94a3b8' }}>-</span>;
+                                                let remark = ''; let color = '#64748b'; let bg = 'transparent';
+                                                if (score < 25 && att != null && att < 75) { remark = 'CIE-1: Marks & Att Low - Meet HOD'; color = '#dc2626'; bg = '#fef2f2'; }
+                                                else if (score < 25) { remark = 'CIE-1: Marks Low - Meet HOD'; color = '#ea580c'; bg = '#fff7ed'; }
+                                                else if (att != null && att < 75) { remark = 'CIE-1: Att Low - Meet HOD'; color = '#ea580c'; bg = '#fff7ed'; }
+                                                else if (score >= 40 && (att == null || att >= 75)) { remark = 'Excellent'; color = '#15803d'; bg = '#f0fdf4'; }
+                                                else { remark = 'Good'; color = '#2563eb'; bg = '#eff6ff'; }
+                                                return <span className={styles.badge} style={{ color, background: bg, fontSize: '0.7rem', fontWeight: 600 }}>{remark}</span>;
+                                            })()}</td>
                                         </tr>
                                     );
                                 }) : <tr><td colSpan="5" style={{ textAlign: 'center', padding: '1rem' }}>Loading real-time data...</td></tr>}
@@ -350,6 +366,11 @@ const StudentDashboard = () => {
                 cie4: fmt(mark.cie4Score),
                 cie5: fmt(mark.cie5Score),
                 attendance: mark.attendancePercentage != null ? mark.attendancePercentage : '-',
+                cie1Att: mark.cie1Att != null ? mark.cie1Att : '-',
+                cie2Att: mark.cie2Att != null ? mark.cie2Att : '-',
+                cie3Att: mark.cie3Att != null ? mark.cie3Att : '-',
+                cie4Att: mark.cie4Att != null ? mark.cie4Att : '-',
+                cie5Att: mark.cie5Att != null ? mark.cie5Att : '-',
                 total
             });
         });
@@ -415,13 +436,13 @@ const StudentDashboard = () => {
                                             </>
                                         )}
                                         {selectedCIE === 'CIE-1' && <><th>CIE-1</th><th>Att %</th></>}
-                                        {selectedCIE === 'CIE-2' && <th>CIE-2</th>}
-                                        {selectedCIE === 'CIE-3' && <th>Skill Test 1</th>}
-                                        {selectedCIE === 'CIE-4' && <th>Skill Test 2</th>}
-                                        {selectedCIE === 'CIE-5' && <th>Activities</th>}
+                                        {selectedCIE === 'CIE-2' && <><th>CIE-2</th><th>Att %</th></>}
+                                        {selectedCIE === 'CIE-3' && <><th>Skill Test 1</th><th>Att %</th></>}
+                                        {selectedCIE === 'CIE-4' && <><th>Skill Test 2</th><th>Att %</th></>}
+                                        {selectedCIE === 'CIE-5' && <><th>Activities</th><th>Att %</th></>}
 
                                         <th>Total</th>
-                                        <th>Status</th>
+                                        <th style={{ background: '#fefce8', color: '#a16207' }}>Remarks</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -465,14 +486,53 @@ const StudentDashboard = () => {
                                                     </>
                                                 )}
 
-                                                {selectedCIE === 'CIE-1' && <><td>{item.cie1 !== '-' ? `${item.cie1} / 50` : '-'}</td><td>{item.attendance !== '-' ? `${item.attendance}%` : '-'}</td></>}
-                                                {selectedCIE === 'CIE-2' && <td>{item.cie2 !== '-' ? `${item.cie2} / 50` : '-'}</td>}
-                                                {selectedCIE === 'CIE-3' && <td>{item.cie3 !== '-' ? `${item.cie3} / 50` : '-'}</td>}
-                                                {selectedCIE === 'CIE-4' && <td>{item.cie4 !== '-' ? `${item.cie4} / 50` : '-'}</td>}
-                                                {selectedCIE === 'CIE-5' && <td>{item.cie5 !== '-' ? `${item.cie5} / 50` : '-'}</td>}
+                                                {selectedCIE === 'CIE-1' && <><td>{item.cie1 !== '-' ? `${item.cie1} / 50` : '-'}</td><td>{item.cie1Att !== '-' ? `${item.cie1Att}%` : '-'}</td></>}
+                                                {selectedCIE === 'CIE-2' && <><td>{item.cie2 !== '-' ? `${item.cie2} / 50` : '-'}</td><td>{item.cie2Att !== '-' ? `${item.cie2Att}%` : '-'}</td></>}
+                                                {selectedCIE === 'CIE-3' && <><td>{item.cie3 !== '-' ? `${item.cie3} / 50` : '-'}</td><td>{item.cie3Att !== '-' ? `${item.cie3Att}%` : '-'}</td></>}
+                                                {selectedCIE === 'CIE-4' && <><td>{item.cie4 !== '-' ? `${item.cie4} / 50` : '-'}</td><td>{item.cie4Att !== '-' ? `${item.cie4Att}%` : '-'}</td></>}
+                                                {selectedCIE === 'CIE-5' && <><td>{item.cie5 !== '-' ? `${item.cie5} / 50` : '-'}</td><td>{item.cie5Att !== '-' ? `${item.cie5Att}%` : '-'}</td></>}
 
                                                 <td style={{ fontWeight: 'bold' }}>{item.total} / {selectedCIE === 'All' ? 250 : 50}</td>
-                                                <td><span className={styles.badge} style={{ background: status.bg, color: status.color, border: `1px solid ${status.color}30` }}>{status.label}</span></td>
+                                                {(() => {
+                                                    const cies = [
+                                                        { key: 'CIE-1', score: item.cie1, att: item.cie1Att },
+                                                        { key: 'CIE-2', score: item.cie2, att: item.cie2Att },
+                                                        { key: 'CIE-3', score: item.cie3, att: item.cie3Att },
+                                                        { key: 'CIE-4', score: item.cie4, att: item.cie4Att },
+                                                        { key: 'CIE-5', score: item.cie5, att: item.cie5Att }
+                                                    ];
+                                                    // Filter to relevant CIEs based on selection
+                                                    const relevantCies = selectedCIE === 'All' ? cies : cies.filter(c => c.key === selectedCIE);
+                                                    const parts = [];
+                                                    let worstColor = '#94a3b8'; let worstBg = 'transparent';
+                                                    let allGood = true;
+                                                    relevantCies.forEach(c => {
+                                                        const score = c.score !== '-' ? parseFloat(c.score) : null;
+                                                        const att = c.att !== '-' ? parseFloat(c.att) : null;
+                                                        if (score == null) return;
+                                                        if (score < 25 && att != null && att < 75) {
+                                                            parts.push(`${c.key}: Marks & Att Low - Meet HOD`);
+                                                            worstColor = '#dc2626'; worstBg = '#fef2f2'; allGood = false;
+                                                        } else if (score < 25) {
+                                                            parts.push(`${c.key}: Marks Low - Meet HOD`);
+                                                            if (worstColor !== '#dc2626') { worstColor = '#ea580c'; worstBg = '#fff7ed'; }
+                                                            allGood = false;
+                                                        } else if (att != null && att < 75) {
+                                                            parts.push(`${c.key}: Att Low - Meet HOD`);
+                                                            if (worstColor !== '#dc2626') { worstColor = '#ea580c'; worstBg = '#fff7ed'; }
+                                                            allGood = false;
+                                                        }
+                                                    });
+                                                    const filledCount = relevantCies.filter(c => c.score !== '-').length;
+                                                    if (filledCount === 0) return <td style={{ color: '#94a3b8', fontSize: '0.8rem' }}>-</td>;
+                                                    if (parts.length > 0) {
+                                                        return <td style={{ fontSize: '0.7rem', fontWeight: 600, color: worstColor, background: worstBg, whiteSpace: 'normal', lineHeight: 1.3 }}>{parts.join(' | ')}</td>;
+                                                    }
+                                                    // All good
+                                                    const avg = item.total / filledCount;
+                                                    if (avg >= 40) return <td style={{ fontSize: '0.75rem', fontWeight: 600, color: '#15803d', background: '#f0fdf4' }}>Excellent</td>;
+                                                    return <td style={{ fontSize: '0.75rem', fontWeight: 600, color: '#2563eb', background: '#eff6ff' }}>Good</td>;
+                                                })()}
                                             </tr>
                                         );
                                     })}
